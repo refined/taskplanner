@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "publisher": "refined",
   "license": "MIT",
+  "icon": "resources/icons/taskplanner-color.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/refined/taskplanner"
