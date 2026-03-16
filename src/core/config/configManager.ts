@@ -16,10 +16,26 @@ export class ConfigManager {
       const raw = fs.readFileSync(this.configPath, 'utf-8');
       const parsed = JSON.parse(raw) as Partial<TaskPlannerConfig>;
       this.config = { ...createDefaultConfig(), ...parsed };
+      this.migrateConfig();
     } else {
       this.config = createDefaultConfig();
     }
     return this.config;
+  }
+
+  private migrateConfig(): void {
+    let changed = false;
+
+    // v2: Add "Rejected" state if missing
+    if (!this.config.states.some((s) => s.name === 'Rejected')) {
+      this.config.states.push({ name: 'Rejected', fileName: 'REJECTED.md', order: 4 });
+      changed = true;
+    }
+
+    if (changed) {
+      this.config.version = 2;
+      this.save();
+    }
   }
 
   save(): void {

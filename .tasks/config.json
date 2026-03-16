@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "idPrefix": "TASK",
+  "nextId": 13,
+  "states": [
+    { "name": "Backlog", "fileName": "BACKLOG.md", "order": 0 },
+    { "name": "Next", "fileName": "NEXT.md", "order": 1 },
+    { "name": "In Progress", "fileName": "IN_PROGRESS.md", "order": 2 },
+    { "name": "Done", "fileName": "DONE.md", "order": 3 }
+  ],
+  "priorities": ["P1", "P2", "P3", "P4"],
+  "tags": ["ui", "backend", "bug", "feature", "docs", "refactor", "testing", "performance"],
+  "insertPosition": "top"
+}

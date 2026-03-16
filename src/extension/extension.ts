@@ -10,6 +10,8 @@ import { registerMoveTaskCommand } from './commands/moveTask.js';
 import { registerDeleteTaskCommand } from './commands/deleteTask.js';
 import { registerOpenTaskCommand } from './commands/openTask.js';
 import { createFileWatcher } from './watchers/fileWatcher.js';
+import { TaskListPanel } from './views/webview/taskListPanel.js';
+import { KanbanPanel } from './views/webview/kanbanPanel.js';
 
 export function activate(context: vscode.ExtensionContext) {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -56,6 +58,16 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('taskplanner.refresh', () => {
       configManager.load();
       taskStore.reload();
+    }),
+  );
+
+  // Webview panel commands
+  context.subscriptions.push(
+    vscode.commands.registerCommand('taskplanner.openTaskList', () => {
+      TaskListPanel.createOrShow(taskStore, configManager);
+    }),
+    vscode.commands.registerCommand('taskplanner.openKanban', () => {
+      KanbanPanel.createOrShow(taskStore, configManager);
     }),
   );
 

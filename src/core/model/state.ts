@@ -9,4 +9,5 @@ export const DEFAULT_STATES: TaskState[] = [
   { name: 'Next', fileName: 'NEXT.md', order: 1 },
   { name: 'In Progress', fileName: 'IN_PROGRESS.md', order: 2 },
   { name: 'Done', fileName: 'DONE.md', order: 3 },
+  { name: 'Rejected', fileName: 'REJECTED.md', order: 4 },
 ];

@@ -93,6 +93,16 @@
         "command": "taskplanner.refresh",
         "title": "TaskPlanner: Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "taskplanner.openTaskList",
+        "title": "TaskPlanner: Open Filtered Task List",
+        "icon": "$(list-filter)"
+      },
+      {
+        "command": "taskplanner.openKanban",
+        "title": "TaskPlanner: Open Kanban Board",
+        "icon": "$(project)"
       }
     ],
     "menus": {
@@ -104,6 +114,16 @@
         },
         {
           "command": "taskplanner.refresh",
+          "when": "view == taskplanner.taskView",
+          "group": "navigation"
+        },
+        {
+          "command": "taskplanner.openTaskList",
+          "when": "view == taskplanner.taskView",
+          "group": "navigation"
+        },
+        {
+          "command": "taskplanner.openKanban",
           "when": "view == taskplanner.taskView",
           "group": "navigation"
         }

@@ -22,7 +22,7 @@ describe('ConfigManager', () => {
     expect(config.version).toBe(1);
     expect(config.idPrefix).toBe('TASK');
     expect(config.nextId).toBe(1);
-    expect(config.states).toHaveLength(4);
+    expect(config.states).toHaveLength(5);
   });
 
   it('saves and loads config', () => {
@@ -59,7 +59,7 @@ describe('ConfigManager', () => {
     const config = configManager.load();
     expect(config.idPrefix).toBe('CUSTOM');
     expect(config.nextId).toBe(50);
-    // Default fields should fill in
-    expect(config.states).toHaveLength(4);
+    // Default fields should fill in (5 states including Rejected)
+    expect(config.states).toHaveLength(5);
   });
 });
