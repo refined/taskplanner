@@ -1,0 +1,19 @@
+export enum Priority {
+  P1 = 'P1',
+  P2 = 'P2',
+  P3 = 'P3',
+  P4 = 'P4',
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  priority: Priority;
+  tags: string[];
+  epic?: string;
+}
+
+export function isPriority(value: string): value is Priority {
+  return Object.values(Priority).includes(value as Priority);
+}

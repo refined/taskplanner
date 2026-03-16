@@ -1,0 +1,172 @@
+{
+  "name": "taskplanner",
+  "displayName": "TaskPlanner",
+  "description": "Markdown-based task tracking that lives in your project folder. AI-friendly, git-tracked, zero config.",
+  "version": "0.1.0",
+  "publisher": "refined",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/refined/taskplanner"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "tasks",
+    "planner",
+    "markdown",
+    "kanban",
+    "project management",
+    "ai",
+    "todo"
+  ],
+  "activationEvents": [
+    "workspaceContains:.tasks",
+    "workspaceContains:.tasks/config.json"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "taskplanner",
+          "title": "TaskPlanner",
+          "icon": "resources/icons/taskplanner.svg"
+        }
+      ]
+    },
+    "views": {
+      "taskplanner": [
+        {
+          "id": "taskplanner.taskView",
+          "name": "Tasks",
+          "icon": "resources/icons/taskplanner.svg",
+          "contextualTitle": "TaskPlanner"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "taskplanner.init",
+        "title": "TaskPlanner: Initialize Project"
+      },
+      {
+        "command": "taskplanner.initAi",
+        "title": "TaskPlanner: Initialize AI Instructions"
+      },
+      {
+        "command": "taskplanner.createTask",
+        "title": "TaskPlanner: Create Task",
+        "icon": "$(add)"
+      },
+      {
+        "command": "taskplanner.moveTask",
+        "title": "TaskPlanner: Move Task"
+      },
+      {
+        "command": "taskplanner.editTask",
+        "title": "TaskPlanner: Edit Task"
+      },
+      {
+        "command": "taskplanner.deleteTask",
+        "title": "TaskPlanner: Delete Task",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "taskplanner.openTask",
+        "title": "TaskPlanner: Open Task in Editor"
+      },
+      {
+        "command": "taskplanner.moveUp",
+        "title": "TaskPlanner: Move Task Up"
+      },
+      {
+        "command": "taskplanner.moveDown",
+        "title": "TaskPlanner: Move Task Down"
+      },
+      {
+        "command": "taskplanner.refresh",
+        "title": "TaskPlanner: Refresh",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "taskplanner.createTask",
+          "when": "view == taskplanner.taskView",
+          "group": "navigation"
+        },
+        {
+          "command": "taskplanner.refresh",
+          "when": "view == taskplanner.taskView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "taskplanner.moveTask",
+          "when": "view == taskplanner.taskView && viewItem == task"
+        },
+        {
+          "command": "taskplanner.editTask",
+          "when": "view == taskplanner.taskView && viewItem == task"
+        },
+        {
+          "command": "taskplanner.deleteTask",
+          "when": "view == taskplanner.taskView && viewItem == task"
+        },
+        {
+          "command": "taskplanner.openTask",
+          "when": "view == taskplanner.taskView && viewItem == task",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "TaskPlanner",
+      "properties": {
+        "taskplanner.taskDirectory": {
+          "type": "string",
+          "default": ".tasks",
+          "description": "Directory for task files relative to workspace root"
+        },
+        "taskplanner.autoInitAiFiles": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically create/update AI instruction files on init"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:extension": "vscode-test",
+    "lint": "eslint src --ext ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/test-cli": "^0.0.6",
+    "@vscode/test-electron": "^2.3.9",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  }
+}
