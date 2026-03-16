@@ -98,6 +98,43 @@ Just a simple task.
     expect(tasks[0].description).toBe('');
   });
 
+  it('parses pipe-separated metadata on one line', () => {
+    const content = `# Backlog
+
+## TASK-001: Implement auth
+**Priority:** P1 | **Tags:** auth, backend
+
+Build OAuth2 authentication.
+
+---
+`;
+    const tasks = parseTasks(content);
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]).toEqual({
+      id: 'TASK-001',
+      title: 'Implement auth',
+      priority: Priority.P1,
+      tags: ['auth', 'backend'],
+      epic: undefined,
+      description: 'Build OAuth2 authentication.',
+    });
+  });
+
+  it('parses pipe-separated metadata with epic', () => {
+    const content = `## TASK-003: Setup CI
+**Priority:** P2 | **Tag:** devops | **Epic:** infrastructure
+
+Configure GitHub Actions.
+
+---
+`;
+    const tasks = parseTasks(content);
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0].priority).toBe(Priority.P2);
+    expect(tasks[0].tags).toEqual(['devops']);
+    expect(tasks[0].epic).toBe('infrastructure');
+  });
+
   it('handles empty file', () => {
     const tasks = parseTasks('# Backlog\n');
     expect(tasks).toHaveLength(0);

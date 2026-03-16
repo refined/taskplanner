@@ -89,4 +89,4 @@ Run `TaskPlanner: Initialize AI Instructions` to generate instruction files that
 
 ## License
 
-MIT
+GPL v3

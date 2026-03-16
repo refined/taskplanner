@@ -3,7 +3,7 @@ import { serializeTask, serializeStateFile } from '../../core/parser/taskSeriali
 import { Task, Priority } from '../../core/model/task.js';
 
 describe('serializeTask', () => {
-  it('serializes a full task', () => {
+  it('serializes a full task with metadata on one line', () => {
     const task: Task = {
       id: 'TASK-001',
       title: 'Implement auth',
@@ -13,7 +13,7 @@ describe('serializeTask', () => {
     };
     const result = serializeTask(task);
     expect(result).toBe(
-      `## TASK-001: Implement auth\n**Priority:** P1\n**Tags:** auth, backend\n\nBuild OAuth2 authentication.`,
+      `## TASK-001: Implement auth\n**Priority:** P1 | **Tags:** auth, backend\n\nBuild OAuth2 authentication.`,
     );
   });
 
@@ -29,7 +29,7 @@ describe('serializeTask', () => {
     expect(result).toContain('**Tag:** bugfix');
   });
 
-  it('includes epic when present', () => {
+  it('includes epic on the same line', () => {
     const task: Task = {
       id: 'TASK-003',
       title: 'Setup CI',
@@ -39,7 +39,7 @@ describe('serializeTask', () => {
       description: 'Configure CI.',
     };
     const result = serializeTask(task);
-    expect(result).toContain('**Epic:** infrastructure');
+    expect(result).toContain('**Priority:** P2 | **Tag:** devops | **Epic:** infrastructure');
   });
 
   it('handles empty tags', () => {
@@ -52,6 +52,7 @@ describe('serializeTask', () => {
     };
     const result = serializeTask(task);
     expect(result).not.toContain('**Tag');
+    expect(result).toContain('**Priority:** P4');
   });
 
   it('handles empty description', () => {

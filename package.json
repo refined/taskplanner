@@ -103,6 +103,10 @@
         "command": "taskplanner.openKanban",
         "title": "TaskPlanner: Open Kanban Board",
         "icon": "$(project)"
+      },
+      {
+        "command": "taskplanner.createTaskInState",
+        "title": "TaskPlanner: Create Task in State"
       }
     ],
     "menus": {

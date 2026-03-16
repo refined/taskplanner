@@ -4,16 +4,16 @@ export function serializeTask(task: Task): string {
   const lines: string[] = [];
 
   lines.push(`## ${task.id}: ${task.title}`);
-  lines.push(`**Priority:** ${task.priority}`);
 
+  const metaParts: string[] = [`**Priority:** ${task.priority}`];
   if (task.tags.length > 0) {
     const label = task.tags.length === 1 ? 'Tag' : 'Tags';
-    lines.push(`**${label}:** ${task.tags.join(', ')}`);
+    metaParts.push(`**${label}:** ${task.tags.join(', ')}`);
   }
-
   if (task.epic) {
-    lines.push(`**Epic:** ${task.epic}`);
+    metaParts.push(`**Epic:** ${task.epic}`);
   }
+  lines.push(metaParts.join(' | '));
 
   if (task.description.trim()) {
     lines.push('');

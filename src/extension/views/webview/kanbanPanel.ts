@@ -69,6 +69,9 @@ export class KanbanPanel {
       case 'openTask':
         vscode.commands.executeCommand('taskplanner.openTask', msg.taskId as string);
         break;
+      case 'addTask':
+        vscode.commands.executeCommand('taskplanner.createTaskInState', msg.stateName as string);
+        break;
     }
   }
 
@@ -95,8 +98,7 @@ export class KanbanPanel {
   }
 
   private buildHtml(data: TaskViewData): string {
-    const allStateNames = this.configManager.get().states.map((s) => s.name);
-    const columns = data.states.map((s) => this.buildColumn(s, allStateNames)).join('\n');
+    const columns = data.states.map((s) => this.buildColumn(s)).join('\n');
 
     const body = `
       <h1>Kanban Board</h1>
@@ -156,17 +158,14 @@ export class KanbanPanel {
         const action = btn.dataset.action;
         const taskId = btn.dataset.taskId;
 
-        if (action === 'move') {
-          const select = btn.previousElementSibling;
-          if (select && select.value) {
-            vscode.postMessage({ type: 'moveTask', taskId, targetState: select.value });
-          }
-        } else if (action === 'delete') {
+        if (action === 'delete') {
           vscode.postMessage({ type: 'deleteTask', taskId });
         } else if (action === 'open') {
           vscode.postMessage({ type: 'openTask', taskId });
         } else if (action === 'showAll') {
           vscode.postMessage({ type: 'showAll', stateName: btn.dataset.stateName });
+        } else if (action === 'addTask') {
+          vscode.postMessage({ type: 'addTask', stateName: btn.dataset.stateName });
         }
       });
     `;
@@ -232,11 +231,32 @@ export class KanbanPanel {
           display: flex;
           gap: 3px;
           margin-top: 6px;
+          justify-content: flex-end;
           opacity: 0;
           transition: opacity 0.15s;
         }
         .kanban-card:hover .card-move-row {
           opacity: 1;
+        }
+        .add-btn {
+          background: none;
+          border: 1px solid var(--card-border);
+          color: var(--vscode-foreground, #ccc);
+          border-radius: 4px;
+          width: 22px;
+          height: 22px;
+          font-size: 16px;
+          line-height: 1;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+        }
+        .add-btn:hover {
+          background: var(--accent);
+          color: #fff;
+          border-color: var(--accent);
         }
       </style>
     `;
@@ -245,8 +265,8 @@ export class KanbanPanel {
     return html;
   }
 
-  private buildColumn(state: StateViewData, allStateNames: string[]): string {
-    const cards = state.tasks.map((t) => this.buildCard(t, state.name, allStateNames)).join('\n');
+  private buildColumn(state: StateViewData): string {
+    const cards = state.tasks.map((t) => this.buildCard(t)).join('\n');
     const showMore = state.hasMore
       ? `<div class="show-more" data-action="showAll" data-state-name="${state.name}">Showing ${state.tasks.length} of ${state.totalCount} — Show all</div>`
       : '';
@@ -256,7 +276,10 @@ export class KanbanPanel {
       <div class="kanban-column" data-state-name="${state.name}">
         <div class="column-header">
           <span class="column-title">${state.name}</span>
-          <span class="count-badge">${state.totalCount}</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="count-badge">${state.totalCount}</span>
+            <button class="add-btn" data-action="addTask" data-state-name="${state.name}" title="Add task to ${state.name}">+</button>
+          </div>
         </div>
         ${cards}
         ${empty}
@@ -265,12 +288,8 @@ export class KanbanPanel {
     `;
   }
 
-  private buildCard(task: TaskViewItem, currentState: string, allStateNames: string[]): string {
+  private buildCard(task: TaskViewItem): string {
     const tags = task.tags.map((t) => `<span class="tag">${this.escapeHtml(t)}</span>`).join('');
-    const otherStates = allStateNames
-      .filter((s) => s !== currentState)
-      .map((s) => `<option value="${s}">${s}</option>`)
-      .join('');
 
     return `
       <div class="kanban-card" draggable="true" data-task-id="${task.id}">
@@ -285,11 +304,6 @@ export class KanbanPanel {
           </div>
         </div>
         <div class="card-move-row">
-          <select style="font-size:0.75em; flex:1;">
-            <option value="">Move to...</option>
-            ${otherStates}
-          </select>
-          <button class="action-btn" data-action="move" data-task-id="${task.id}" style="font-size:0.75em;">Go</button>
           <button class="action-btn danger" data-action="delete" data-task-id="${task.id}" style="font-size:0.75em;" title="Delete">✕</button>
         </div>
       </div>

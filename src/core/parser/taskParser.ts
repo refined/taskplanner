@@ -52,25 +52,38 @@ export function parseTasks(content: string): Task[] {
     }
 
     if (inMetadata) {
-      const priorityMatch = line.match(PRIORITY_RE);
-      if (priorityMatch) {
-        const val = priorityMatch[1].trim();
-        current.priority = isPriority(val) ? val : Priority.P4;
-        continue;
+      // Support pipe-separated metadata on a single line
+      const segments = line.includes('|') ? line.split('|').map((s) => s.trim()) : [line];
+      let matchedAny = false;
+
+      for (const segment of segments) {
+        const priorityMatch = segment.match(PRIORITY_RE);
+        if (priorityMatch) {
+          const val = priorityMatch[1].trim();
+          current.priority = isPriority(val) ? val : Priority.P4;
+          matchedAny = true;
+          continue;
+        }
+
+        const tagsMatch = segment.match(TAGS_RE);
+        if (tagsMatch) {
+          current.tags = tagsMatch[1]
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean);
+          matchedAny = true;
+          continue;
+        }
+
+        const epicMatch = segment.match(EPIC_RE);
+        if (epicMatch) {
+          current.epic = epicMatch[1].trim();
+          matchedAny = true;
+          continue;
+        }
       }
 
-      const tagsMatch = line.match(TAGS_RE);
-      if (tagsMatch) {
-        current.tags = tagsMatch[1]
-          .split(',')
-          .map((t) => t.trim())
-          .filter(Boolean);
-        continue;
-      }
-
-      const epicMatch = line.match(EPIC_RE);
-      if (epicMatch) {
-        current.epic = epicMatch[1].trim();
+      if (matchedAny) {
         continue;
       }
 
