@@ -29,6 +29,7 @@ export function getWebviewHtml(
       --header-fg: var(--vscode-foreground);
       --muted-fg: var(--vscode-descriptionForeground);
       --accent: var(--vscode-focusBorder);
+      --p0-color: #9b59b6;
       --p1-color: #e74c3c;
       --p2-color: #e67e22;
       --p3-color: #3498db;
@@ -84,6 +85,7 @@ export function getWebviewHtml(
       align-self: stretch;
     }
 
+    .priority-P0 { background: var(--p0-color); }
     .priority-P1 { background: var(--p1-color); }
     .priority-P2 { background: var(--p2-color); }
     .priority-P3 { background: var(--p3-color); }
@@ -109,9 +111,7 @@ export function getWebviewHtml(
 
     .task-title {
       font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      word-break: break-word;
     }
 
     .task-tags {

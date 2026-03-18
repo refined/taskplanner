@@ -83,7 +83,7 @@ export class KanbanPanel {
   private update(): void {
     const config = this.configManager.get();
     const states = config.states;
-    const sortBy = config.sortBy ?? 'priority';
+    const sortBy = vscode.workspace.getConfiguration('taskplanner').get<'priority' | 'name' | 'id'>('sortBy', 'priority');
     const allTasks = this.taskStore.getAllTasks();
     const data = filterAndPaginate(allTasks, states, undefined, undefined, sortBy);
 
@@ -258,7 +258,7 @@ export class KanbanPanel {
         }
         .card-top {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 6px;
         }
         .card-move-row {

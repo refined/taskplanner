@@ -81,7 +81,7 @@ export class TaskListPanel {
   private update(): void {
     const config = this.configManager.get();
     const states = config.states;
-    const sortBy = config.sortBy ?? 'priority';
+    const sortBy = vscode.workspace.getConfiguration('taskplanner').get<'priority' | 'name' | 'id'>('sortBy', 'priority');
     const allTasks = this.taskStore.getAllTasks();
     const data = filterAndPaginate(allTasks, states, this.filter, undefined, sortBy);
 

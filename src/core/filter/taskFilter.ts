@@ -20,7 +20,7 @@ function matchesQuery(task: Task, query: string): boolean {
   return task.id.toLowerCase().includes(q) || task.title.toLowerCase().includes(q);
 }
 
-const PRIORITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
+const PRIORITY_ORDER: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3, P4: 4 };
 
 export function sortTasks(tasks: Task[], sortBy: 'priority' | 'name' | 'id'): Task[] {
   const sorted = [...tasks];

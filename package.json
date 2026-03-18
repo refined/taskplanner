@@ -1,6 +1,6 @@
 {
   "name": "taskplanner",
-  "displayName": "TaskPlanner",
+  "displayName": "Task Planner AI",
   "description": "Markdown-based task tracking that lives in your project folder. AI-friendly, git-tracked.",
   "version": "0.9.3",
   "publisher": "refined",
@@ -183,6 +183,17 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically create/update AI instruction files on init"
+        },
+        "taskplanner.sortBy": {
+          "type": "string",
+          "enum": ["priority", "name", "id"],
+          "default": "priority",
+          "enumDescriptions": [
+            "Sort by priority (P0 first), then by name",
+            "Sort alphabetically by task title",
+            "Sort by task ID"
+          ],
+          "description": "Default sort order for tasks in all views"
         }
       }
     }

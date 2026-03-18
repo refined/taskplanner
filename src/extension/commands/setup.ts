@@ -53,8 +53,9 @@ export function registerSetupCommand(
         name: 'Name',
         id: 'ID',
       };
+      const currentSort = vscode.workspace.getConfiguration('taskplanner').get<string>('sortBy', 'priority');
       items.push({
-        label: `$(list-ordered) Sort By: ${sortLabels[config.sortBy ?? 'priority']}`,
+        label: `$(list-ordered) Sort By: ${sortLabels[currentSort]}`,
         description: 'Change task sort order',
         action: 'sortBy',
       });
@@ -95,8 +96,7 @@ export function registerSetupCommand(
             placeHolder: 'Select sort order',
           });
           if (sortPicked) {
-            configManager.update({ sortBy: sortPicked.value });
-            configManager.save();
+            await vscode.workspace.getConfiguration('taskplanner').update('sortBy', sortPicked.value, vscode.ConfigurationTarget.Workspace);
             vscode.window.showInformationMessage(`Sort order set to: ${sortPicked.label}`);
           }
           break;

@@ -37,7 +37,7 @@ export class TaskTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
     if (element instanceof StateTreeItem) {
       // Children of a state: task items
-      const sortBy = this.configManager.get().sortBy ?? 'priority';
+      const sortBy = vscode.workspace.getConfiguration('taskplanner').get<'priority' | 'name' | 'id'>('sortBy', 'priority');
       const tasks = sortTasks(this.taskStore.getTasksByState(element.state.name), sortBy);
       return tasks.map((task) => new TaskTreeItem(task, element.state.name));
     }
@@ -99,6 +99,8 @@ export class TaskTreeItem extends vscode.TreeItem {
 
   private getPriorityIcon(): vscode.ThemeIcon {
     switch (this.task.priority) {
+      case 'P0':
+        return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.purple'));
       case 'P1':
         return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.red'));
       case 'P2':

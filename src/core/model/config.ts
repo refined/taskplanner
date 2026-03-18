@@ -18,7 +18,7 @@ export function createDefaultConfig(): TaskPlannerConfig {
     idPrefix: 'TASK',
     nextId: 1,
     states: [...DEFAULT_STATES],
-    priorities: ['P1', 'P2', 'P3', 'P4'],
+    priorities: ['P0', 'P1', 'P2', 'P3', 'P4'],
     tags: [],
     insertPosition: 'top',
     aiPlanRequired: true,

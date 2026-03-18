@@ -79,6 +79,8 @@ export function registerCreateTaskCommand(
 
 function getPriorityDescription(priority: string): string {
   switch (priority) {
+    case 'P0':
+      return 'Blocker';
     case 'P1':
       return 'Critical';
     case 'P2':
