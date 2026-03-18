@@ -22,8 +22,11 @@ Markdown-based task tracking that lives in your project folder. AI-friendly, git
 
 1. Install the extension from the VS Code Marketplace
 2. Open a project folder
-3. Run `TaskPlanner: Initialize Project` from the command palette
-4. Start creating tasks!
+3. Click the TaskPlanner icon in the activity bar — a welcome view with **Initialize Project** button appears
+4. Or use the **gear icon** (Setup) in the sidebar title bar to access all setup options
+5. Start creating tasks!
+
+You can also run `TaskPlanner: Initialize Project` from the command palette (`Ctrl+Shift+P`).
 
 ## Task Format
 
@@ -50,15 +53,49 @@ Implement OAuth2 authentication with Google and GitHub providers.
 ---
 ```
 
+## Setup Menu
+
+Click the **gear icon** in the TaskPlanner sidebar title bar to access:
+
+- **Initialize Project** — create `.tasks/` folder and state files (only shown if not yet initialized)
+- **Initialize AI Instructions** — generate/update `CLAUDE.md` and `.cursorrules` with task workflow instructions
+- **AI Planning: Enable/Disable** — toggle whether AI agents must write a `### Plan` before coding
+- **Open Settings** — open TaskPlanner extension settings
+
 ## For AI Agents
 
-Run `TaskPlanner: Initialize AI Instructions` to generate instruction files that teach AI agents how to use your task board:
+Supported AI tools: **Claude** (via `CLAUDE.md`) and **Cursor** (via `.cursorrules`).
+
+Run `TaskPlanner: Initialize AI Instructions` (or use the Setup menu) to generate instruction files that teach AI agents how to use your task board:
 
 1. Agent reads `.tasks/NEXT.md`
 2. Picks the highest-priority task
 3. Moves it to `.tasks/IN_PROGRESS.md`
-4. Implements the task
-5. Moves it to `.tasks/DONE.md`
+4. Writes a `### Plan` subsection under the task heading (if AI Planning is enabled)
+5. Implements the task
+6. Moves it to `.tasks/DONE.md`
+
+### AI Planning
+
+When enabled (default), the generated AI instructions require agents to write a plan before coding. The plan is stored as a `### Plan` subsection directly inside the task in `IN_PROGRESS.md`:
+
+```markdown
+## TASK-001: Implement user authentication
+**Priority:** P1
+**Tags:** auth, backend
+
+Implement OAuth2 authentication with Google and GitHub providers.
+
+### Plan
+
+- Add OAuth2 client configuration
+- Create auth callback endpoint
+- Implement token refresh logic
+
+---
+```
+
+Toggle this via the Setup menu or set `aiPlanRequired` in `.tasks/config.json`.
 
 ## Configuration
 
@@ -77,9 +114,18 @@ Run `TaskPlanner: Initialize AI Instructions` to generate instruction files that
   ],
   "priorities": ["P1", "P2", "P3", "P4"],
   "tags": [],
-  "insertPosition": "top"
+  "insertPosition": "top",
+  "aiPlanRequired": true
 }
 ```
+
+| Field | Description |
+|-------|-------------|
+| `idPrefix` | Prefix for task IDs (e.g. `TASK` → `TASK-001`) |
+| `states` | Task board columns with file mappings |
+| `priorities` | Available priority levels |
+| `insertPosition` | Where new tasks are added: `top` or `bottom` |
+| `aiPlanRequired` | Whether AI agents must write a `### Plan` before coding |
 
 ## Works With
 

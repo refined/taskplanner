@@ -107,27 +107,44 @@
       {
         "command": "taskplanner.createTaskInState",
         "title": "TaskPlanner: Create Task in State"
+      },
+      {
+        "command": "taskplanner.setup",
+        "title": "TaskPlanner: Setup",
+        "icon": "$(gear)"
+      }
+    ],
+    "viewsWelcome": [
+      {
+        "view": "taskplanner.taskView",
+        "contents": "No TaskPlanner project found in this workspace.\n[$(folder-opened) Initialize Project](command:taskplanner.init)\n[$(gear) Setup](command:taskplanner.setup)",
+        "when": "!taskplanner:initialized"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "taskplanner.createTask",
-          "when": "view == taskplanner.taskView",
+          "when": "view == taskplanner.taskView && taskplanner:initialized",
           "group": "navigation"
         },
         {
           "command": "taskplanner.refresh",
-          "when": "view == taskplanner.taskView",
+          "when": "view == taskplanner.taskView && taskplanner:initialized",
           "group": "navigation"
         },
         {
           "command": "taskplanner.openTaskList",
-          "when": "view == taskplanner.taskView",
+          "when": "view == taskplanner.taskView && taskplanner:initialized",
           "group": "navigation"
         },
         {
           "command": "taskplanner.openKanban",
+          "when": "view == taskplanner.taskView && taskplanner:initialized",
+          "group": "navigation"
+        },
+        {
+          "command": "taskplanner.setup",
           "when": "view == taskplanner.taskView",
           "group": "navigation"
         }

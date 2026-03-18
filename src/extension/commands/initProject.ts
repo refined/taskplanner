@@ -36,6 +36,7 @@ export function registerInitCommand(
           await vscode.commands.executeCommand('taskplanner.initAi');
         }
 
+        vscode.commands.executeCommand('setContext', 'taskplanner:initialized', true);
         vscode.window.showInformationMessage('TaskPlanner initialized! Check .tasks/ directory.');
       } catch (err) {
         vscode.window.showErrorMessage(`Failed to initialize TaskPlanner: ${err}`);

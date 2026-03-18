@@ -11,6 +11,7 @@ export class TaskTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   constructor(
     private taskStore: TaskStore,
     private configManager: ConfigManager,
+    private isInitialized: () => boolean,
   ) {}
 
   refresh(): void {
@@ -23,6 +24,9 @@ export class TaskTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
   getChildren(element?: TreeNode): TreeNode[] {
     if (!element) {
+      if (!this.isInitialized()) {
+        return []; // Welcome view will show instead
+      }
       // Root level: state nodes
       return this.configManager.get().states.map((state) => {
         const tasks = this.taskStore.getTasksByState(state.name);

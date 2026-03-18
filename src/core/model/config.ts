@@ -8,6 +8,7 @@ export interface TaskPlannerConfig {
   priorities: string[];
   tags: string[];
   insertPosition: 'top' | 'bottom';
+  aiPlanRequired: boolean;
 }
 
 export function createDefaultConfig(): TaskPlannerConfig {
@@ -19,5 +20,6 @@ export function createDefaultConfig(): TaskPlannerConfig {
     priorities: ['P1', 'P2', 'P3', 'P4'],
     tags: [],
     insertPosition: 'top',
+    aiPlanRequired: true,
   };
 }

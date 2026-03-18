@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 import * as path from 'path';
 import { ConfigManager } from '../core/config/configManager.js';
 import { FileStore } from '../core/store/fileStore.js';
 import { TaskStore } from '../core/store/taskStore.js';
 import { TaskTreeProvider } from './views/taskTreeProvider.js';
 import { registerInitCommand } from './commands/initProject.js';
+import { registerInitAiCommand } from './commands/initAi.js';
+import { registerSetupCommand } from './commands/setup.js';
 import { registerCreateTaskCommand } from './commands/createTask.js';
 import { registerMoveTaskCommand } from './commands/moveTask.js';
 import { registerDeleteTaskCommand } from './commands/deleteTask.js';
@@ -28,14 +31,18 @@ export function activate(context: vscode.ExtensionContext) {
   const taskStore = new TaskStore(configManager, fileStore);
 
   // Load config and tasks if .tasks/ exists
-  const fs = require('fs');
-  if (fs.existsSync(tasksDir)) {
+  const isInitialized = fs.existsSync(tasksDir);
+  vscode.commands.executeCommand('setContext', 'taskplanner:initialized', isInitialized);
+
+  if (isInitialized) {
     configManager.load();
     taskStore.reload();
   }
 
   // Tree view
-  const treeProvider = new TaskTreeProvider(taskStore, configManager);
+  const treeProvider = new TaskTreeProvider(taskStore, configManager, () =>
+    fs.existsSync(tasksDir),
+  );
   const treeView = vscode.window.createTreeView('taskplanner.taskView', {
     treeDataProvider: treeProvider,
     showCollapseAll: true,
@@ -48,6 +55,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Commands
   registerInitCommand(context, configManager, fileStore, taskStore);
+  registerInitAiCommand(context, configManager);
+  registerSetupCommand(context, tasksDir, configManager);
   registerCreateTaskCommand(context, taskStore, configManager);
   registerMoveTaskCommand(context, taskStore, configManager);
   registerDeleteTaskCommand(context, taskStore);
