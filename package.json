@@ -1,10 +1,10 @@
 {
   "name": "taskplanner",
   "displayName": "TaskPlanner",
-  "description": "Markdown-based task tracking that lives in your project folder. AI-friendly, git-tracked, zero config.",
-  "version": "0.9.1",
+  "description": "Markdown-based task tracking that lives in your project folder. AI-friendly, git-tracked.",
+  "version": "0.9.3",
   "publisher": "refined",
-  "license": "MIT",
+  "license": "GPL v3",
   "icon": "resources/icons/taskplanner-color.png",
   "repository": {
     "type": "git",
@@ -23,7 +23,9 @@
     "kanban",
     "project management",
     "ai",
-    "todo"
+    "todo",
+    "claude",
+    "cursor"
   ],
   "activationEvents": [
     "workspaceContains:.tasks",
