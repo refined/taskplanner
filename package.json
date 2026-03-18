@@ -2,7 +2,7 @@
   "name": "taskplanner",
   "displayName": "Task Planner AI",
   "description": "Markdown-based task tracking that lives in your project folder. AI-friendly, git-tracked.",
-  "version": "0.9.3",
+  "version": "0.9.5",
   "publisher": "refined",
   "license": "GPL v3",
   "icon": "resources/icons/taskplanner-color.png",

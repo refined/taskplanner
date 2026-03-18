@@ -1,12 +1,12 @@
-# TaskPlanner
+# Task Planner AI
 
-Markdown-based task tracking that lives in your project folder. AI-friendly, git-tracked, zero external services.
+Markdown-based task tracking built for AI-assisted development. Tasks live in your repo as `.md` files — readable by humans, parseable by AI agents, tracked by git.
 
 ## Why?
 
-- **Tasks next to code** — no context switching to Jira/Asana
-- **Git-tracked** — full history of task changes in your commits
-- **AI-agent ready** — agents read `NEXT.md`, pick a task, and start building
+- **AI-native workflow** — agents read `NEXT.md`, pick a task, plan, build, and move it to `DONE.md`
+- **Tasks next to code** — no context switching to Jira/Linear/Asana
+- **Git-tracked** — full history of every task change in your commits
 - **Human-readable** — plain markdown, works without the extension installed
 - **Zero config** — run "Initialize Project" and start creating tasks
 
@@ -16,18 +16,21 @@ Markdown-based task tracking that lives in your project folder. AI-friendly, git
 
 ## Features
 
-- Sidebar tree view with tasks grouped by state (Backlog → Next → In Progress → Done)
-- Create, move, edit, and delete tasks from the command palette or tree view
-- File watcher — edit `.tasks/*.md` by hand and the tree updates live
-- AI integration — generates `CLAUDE.md` and `.cursorrules` with task workflow instructions
-- Configurable states, priorities, tags, and task ID prefix
+- **Kanban board** — drag-and-drop cards between columns, visual priority indicators
+- **Filtered task list** — search by ID or title, filter by state
+- **Sidebar tree view** — tasks grouped by state (Backlog → Next → In Progress → Done)
+- **Drag-and-drop** — move tasks between states in tree view and Kanban board
+- **AI instruction generation** — auto-generates `CLAUDE.md` and `.cursorrules` that teach agents your task workflow
+- **AI planning mode** — agents write a `### Plan` inside the task before coding
+- **Live file watcher** — edit `.tasks/*.md` by hand and all views update instantly
+- **Configurable** — custom states, priorities (P0–P4), tags, ID prefix, sort order
 
 ## Quick Start
 
 1. Install the extension from the VS Code Marketplace
 2. Open a project folder
-3. Click the TaskPlanner icon in the activity bar — a welcome view with **Initialize Project** button appears
-4. Or use the **gear icon** (Setup) in the sidebar title bar to access all setup options
+3. Click the TaskPlanner icon in the activity bar — a welcome view with **Initialize Project** appears
+4. Run **Initialize AI Instructions** to generate workflow files for your AI tools
 5. Start creating tasks!
 
 You can also run `TaskPlanner: Initialize Project` from the command palette (`Ctrl+Shift+P`).
@@ -45,65 +48,112 @@ Tasks are stored in `.tasks/` as plain markdown:
 └── DONE.md
 ```
 
-Each task looks like:
+Each task is a `##` heading section:
 
 ```markdown
-## TASK-001: Implement user authentication
-**Priority:** P1
+## TASK-001: Set up OAuth2 authentication
+**Priority:** P0
 **Tags:** auth, backend
 
-Implement OAuth2 authentication with Google and GitHub providers.
+Implement OAuth2 flow with Google and GitHub providers.
+Add token refresh logic and session management.
+
+---
+
+## TASK-002: Add rate limiting to API endpoints
+**Priority:** P1
+**Tags:** api, security
+
+Apply rate limiting middleware to all public endpoints.
+Use sliding window algorithm, 100 req/min per API key.
 
 ---
 ```
 
-## Setup Menu
+### Priorities
 
-Click the **gear icon** in the TaskPlanner sidebar title bar to access:
+| Level | Meaning | Color |
+|-------|---------|-------|
+| P0 | Blocker | Purple |
+| P1 | Critical | Red |
+| P2 | High | Orange |
+| P3 | Medium | Blue |
+| P4 | Low | Grey |
 
-- **Initialize Project** — create `.tasks/` folder and state files (only shown if not yet initialized)
-- **Initialize AI Instructions** — generate/update `CLAUDE.md` and `.cursorrules` with task workflow instructions
-- **AI Planning: Enable/Disable** — toggle whether AI agents must write a `### Plan` before coding
-- **Open Settings** — open TaskPlanner extension settings
+## AI Agent Workflow
 
-## For AI Agents
+TaskPlanner is designed as a task interface between you and AI coding agents. Supported tools: **Claude Code** (via `CLAUDE.md`), **Cursor** (via `.cursorrules`).
 
-Supported AI tools: **Claude** (via `CLAUDE.md`) and **Cursor** (via `.cursorrules`).
+Run **Initialize AI Instructions** (Setup menu or command palette) to generate instruction files. The generated workflow teaches agents to:
 
-Run `TaskPlanner: Initialize AI Instructions` (or use the Setup menu) to generate instruction files that teach AI agents how to use your task board:
-
-1. Agent reads `.tasks/NEXT.md`
-2. Picks the highest-priority task
-3. Moves it to `.tasks/IN_PROGRESS.md`
-4. Writes a `### Plan` subsection under the task heading (if AI Planning is enabled)
-5. Implements the task
-6. Moves it to `.tasks/DONE.md`
+1. Read `.tasks/NEXT.md` and pick the highest-priority task
+2. Move it to `.tasks/IN_PROGRESS.md`
+3. Write a `### Plan` subsection under the task (if AI Planning is enabled)
+4. Implement the task
+5. Move it to `.tasks/DONE.md`
 
 ### AI Planning
 
-When enabled (default), the generated AI instructions require agents to write a plan before coding. The plan is stored as a `### Plan` subsection directly inside the task in `IN_PROGRESS.md`:
+When enabled (default), agents must write a plan before coding. The plan lives inside the task:
 
 ```markdown
-## TASK-001: Implement user authentication
+## TASK-003: Migrate database to PostgreSQL
 **Priority:** P1
-**Tags:** auth, backend
+**Tags:** database, migration
 
-Implement OAuth2 authentication with Google and GitHub providers.
+Replace SQLite with PostgreSQL for production readiness.
 
 ### Plan
 
-- Add OAuth2 client configuration
-- Create auth callback endpoint
-- Implement token refresh logic
+- Add pg driver and connection pool configuration
+- Create migration scripts for all existing tables
+- Update repository layer to use parameterized queries
+- Add integration tests against test database
 
 ---
 ```
 
-Toggle this via the Setup menu or set `aiPlanRequired` in `.tasks/config.json`.
+Toggle via the Setup menu or set `aiPlanRequired` in `.tasks/config.json`.
 
-## Configuration
+### Auto-init
 
-`.tasks/config.json` controls behavior:
+When `autoInitAiFiles` is enabled (default), AI instruction files are automatically created or updated during project initialization — so agents get the workflow from the first commit.
+
+## Views
+
+### Kanban Board
+
+Open via command palette → `TaskPlanner: Open Kanban Board`. Columns map to task states. Drag cards between columns to change state. Task titles wrap fully — no truncation.
+
+### Filtered Task List
+
+Open via command palette → `TaskPlanner: Open Filtered Task List`. Search tasks by ID or title, filter by state.
+
+### Sidebar Tree
+
+Always visible in the activity bar. Tasks grouped under collapsible state nodes with task counts. Drag-and-drop between states. Priority shown as colored icons.
+
+## Setup Menu
+
+Click the **gear icon** in the TaskPlanner sidebar title bar:
+
+- **Initialize Project** — create `.tasks/` folder and state files
+- **Initialize AI Instructions** — generate/update `CLAUDE.md` and `.cursorrules`
+- **AI Planning: Enable/Disable** — toggle whether agents must plan before coding
+- **Sort By** — change task sort order (Priority / Name / ID)
+- **Open Settings** — open VS Code extension settings
+
+## Settings
+
+Extension settings (accessible via VS Code Settings UI):
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `taskplanner.taskDirectory` | `.tasks` | Directory for task files relative to workspace root |
+| `taskplanner.autoInitAiFiles` | `true` | Auto-create/update AI instruction files on init |
+| `taskplanner.sortBy` | `priority` | Sort order for tasks: `priority`, `name`, or `id` |
+
+Project config (`.tasks/config.json`):
 
 ```json
 {
@@ -116,7 +166,7 @@ Toggle this via the Setup menu or set `aiPlanRequired` in `.tasks/config.json`.
     { "name": "In Progress", "fileName": "IN_PROGRESS.md", "order": 2 },
     { "name": "Done", "fileName": "DONE.md", "order": 3 }
   ],
-  "priorities": ["P1", "P2", "P3", "P4"],
+  "priorities": ["P0", "P1", "P2", "P3", "P4"],
   "tags": [],
   "insertPosition": "top",
   "aiPlanRequired": true
