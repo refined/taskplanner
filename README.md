@@ -10,6 +10,10 @@ Markdown-based task tracking that lives in your project folder. AI-friendly, git
 - **Human-readable** — plain markdown, works without the extension installed
 - **Zero config** — run "Initialize Project" and start creating tasks
 
+## Overview
+
+![TaskPlanner overview](resources/screenshots/overview.png)
+
 ## Features
 
 - Sidebar tree view with tasks grouped by state (Backlog → Next → In Progress → Done)
