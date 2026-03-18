@@ -20,11 +20,31 @@ function matchesQuery(task: Task, query: string): boolean {
   return task.id.toLowerCase().includes(q) || task.title.toLowerCase().includes(q);
 }
 
+const PRIORITY_ORDER: Record<string, number> = { P1: 0, P2: 1, P3: 2, P4: 3 };
+
+export function sortTasks(tasks: Task[], sortBy: 'priority' | 'name' | 'id'): Task[] {
+  const sorted = [...tasks];
+  sorted.sort((a, b) => {
+    switch (sortBy) {
+      case 'priority': {
+        const diff = (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9);
+        return diff !== 0 ? diff : a.title.localeCompare(b.title);
+      }
+      case 'name':
+        return a.title.localeCompare(b.title);
+      case 'id':
+        return a.id.localeCompare(b.id);
+    }
+  });
+  return sorted;
+}
+
 export function filterAndPaginate(
   tasksByState: Map<string, Task[]>,
   states: TaskState[],
   filter?: TaskFilter,
   limit: number | null = DEFAULT_LIMIT,
+  sortBy: 'priority' | 'name' | 'id' = 'priority',
 ): TaskViewData {
   const result: StateViewData[] = [];
 
@@ -40,6 +60,9 @@ export function filterAndPaginate(
     if (filter?.query) {
       tasks = tasks.filter((t) => matchesQuery(t, filter.query!));
     }
+
+    // Apply sorting
+    tasks = sortTasks(tasks, sortBy);
 
     const totalCount = tasks.length;
     const hasMore = limit !== null && totalCount > limit;

@@ -7,6 +7,13 @@ Create a WebviewPanel that displays all tasks in a flat list with filter control
 
 ---
 
+## TASK-003: Implement task edit command
+**Priority:** P2 | **Tags:** ui, feature
+
+The `taskplanner.editTask` command is registered in package.json but has no implementation. Add a multi-step input flow similar to createTask that pre-fills current values.
+
+---
+
 ## TASK-002: Build kanban board webview
 **Priority:** P1 | **Tags:** ui, feature
 

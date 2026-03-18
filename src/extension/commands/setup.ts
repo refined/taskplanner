@@ -48,6 +48,17 @@ export function registerSetupCommand(
         action: 'togglePlan',
       });
 
+      const sortLabels: Record<string, string> = {
+        priority: 'Priority',
+        name: 'Name',
+        id: 'ID',
+      };
+      items.push({
+        label: `$(list-ordered) Sort By: ${sortLabels[config.sortBy ?? 'priority']}`,
+        description: 'Change task sort order',
+        action: 'sortBy',
+      });
+
       items.push({
         label: '$(gear) Open Settings',
         description: 'Configure TaskPlanner extension settings',
@@ -74,6 +85,22 @@ export function registerSetupCommand(
             `AI Planning ${!config.aiPlanRequired ? 'enabled' : 'disabled'}. Run "Initialize AI Instructions" to update AI files.`,
           );
           break;
+        case 'sortBy': {
+          const sortOptions = [
+            { label: 'Priority', description: 'Sort by priority (P1 first), then by name', value: 'priority' as const },
+            { label: 'Name', description: 'Sort alphabetically by task title', value: 'name' as const },
+            { label: 'ID', description: 'Sort by task ID', value: 'id' as const },
+          ];
+          const sortPicked = await vscode.window.showQuickPick(sortOptions, {
+            placeHolder: 'Select sort order',
+          });
+          if (sortPicked) {
+            configManager.update({ sortBy: sortPicked.value });
+            configManager.save();
+            vscode.window.showInformationMessage(`Sort order set to: ${sortPicked.label}`);
+          }
+          break;
+        }
         case 'settings':
           await vscode.commands.executeCommand(
             'workbench.action.openSettings',

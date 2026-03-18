@@ -60,6 +60,11 @@ export class KanbanPanel {
         }
         this.update();
         break;
+      case 'showCompleted':
+        this.showAllForState.add('Done');
+        this.showAllForState.add('Rejected');
+        this.update();
+        break;
       case 'moveTask':
         this.taskStore.moveTask(msg.taskId as string, msg.targetState as string);
         break;
@@ -76,13 +81,15 @@ export class KanbanPanel {
   }
 
   private update(): void {
-    const states = this.configManager.get().states;
+    const config = this.configManager.get();
+    const states = config.states;
+    const sortBy = config.sortBy ?? 'priority';
     const allTasks = this.taskStore.getAllTasks();
-    const data = filterAndPaginate(allTasks, states);
+    const data = filterAndPaginate(allTasks, states, undefined, undefined, sortBy);
 
     // Apply per-state "show all"
     if (this.showAllForState.size > 0) {
-      const unlimitedData = filterAndPaginate(allTasks, states, undefined, null);
+      const unlimitedData = filterAndPaginate(allTasks, states, undefined, null, sortBy);
       for (const state of data.states) {
         if (this.showAllForState.has(state.name)) {
           const full = unlimitedData.states.find((s) => s.name === state.name);
@@ -98,7 +105,32 @@ export class KanbanPanel {
   }
 
   private buildHtml(data: TaskViewData): string {
-    const columns = data.states.map((s) => this.buildColumn(s)).join('\n');
+    // Extract known states
+    const stateMap = new Map(data.states.map((s) => [s.name, s]));
+    const nextState = stateMap.get('Next');
+    const backlogState = stateMap.get('Backlog');
+    const inProgressState = stateMap.get('In Progress');
+    const doneState = stateMap.get('Done');
+    const rejectedState = stateMap.get('Rejected');
+
+    // Build columns: Next+Backlog | In Progress | Done/Rejected
+    // Any other custom states get their own columns
+    const knownNames = new Set(['Next', 'Backlog', 'In Progress', 'Done', 'Rejected']);
+    const customStates = data.states.filter((s) => !knownNames.has(s.name));
+
+    let columns = '';
+    if (nextState || backlogState) {
+      columns += this.buildNextBacklogColumn(nextState, backlogState);
+    }
+    if (inProgressState) {
+      columns += this.buildStandardColumn(inProgressState);
+    }
+    for (const cs of customStates) {
+      columns += this.buildStandardColumn(cs);
+    }
+    if (doneState || rejectedState) {
+      columns += this.buildCompletedColumn(doneState, rejectedState);
+    }
 
     const body = `
       <h1>Kanban Board</h1>
@@ -106,7 +138,7 @@ export class KanbanPanel {
     `;
 
     const script = `
-      // Drag and drop
+      // Drag and drop — drop targets are elements with [data-state-name]
       let draggedTaskId = null;
 
       document.addEventListener('dragstart', (e) => {
@@ -121,32 +153,32 @@ export class KanbanPanel {
       document.addEventListener('dragend', (e) => {
         const card = e.target.closest('.kanban-card');
         if (card) card.classList.remove('dragging');
-        document.querySelectorAll('.kanban-column').forEach(col => col.classList.remove('drag-over'));
+        document.querySelectorAll('[data-state-name]').forEach(el => el.classList.remove('drag-over'));
         draggedTaskId = null;
       });
 
       document.addEventListener('dragover', (e) => {
-        const col = e.target.closest('.kanban-column');
-        if (!col) return;
+        const zone = e.target.closest('[data-state-name]');
+        if (!zone) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-        document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
-        col.classList.add('drag-over');
+        document.querySelectorAll('[data-state-name]').forEach(el => el.classList.remove('drag-over'));
+        zone.classList.add('drag-over');
       });
 
       document.addEventListener('dragleave', (e) => {
-        const col = e.target.closest('.kanban-column');
-        if (col && !col.contains(e.relatedTarget)) {
-          col.classList.remove('drag-over');
+        const zone = e.target.closest('[data-state-name]');
+        if (zone && !zone.contains(e.relatedTarget)) {
+          zone.classList.remove('drag-over');
         }
       });
 
       document.addEventListener('drop', (e) => {
         e.preventDefault();
-        const col = e.target.closest('.kanban-column');
-        if (!col || !draggedTaskId) return;
-        col.classList.remove('drag-over');
-        const targetState = col.dataset.stateName;
+        const zone = e.target.closest('[data-state-name]');
+        if (!zone || !draggedTaskId) return;
+        zone.classList.remove('drag-over');
+        const targetState = zone.dataset.stateName;
         vscode.postMessage({ type: 'moveTask', taskId: draggedTaskId, targetState });
         draggedTaskId = null;
       });
@@ -164,6 +196,8 @@ export class KanbanPanel {
           vscode.postMessage({ type: 'openTask', taskId });
         } else if (action === 'showAll') {
           vscode.postMessage({ type: 'showAll', stateName: btn.dataset.stateName });
+        } else if (action === 'showCompleted') {
+          vscode.postMessage({ type: 'showCompleted' });
         } else if (action === 'addTask') {
           vscode.postMessage({ type: 'addTask', stateName: btn.dataset.stateName });
         }
@@ -189,7 +223,7 @@ export class KanbanPanel {
           padding: 10px;
           transition: border-color 0.15s;
         }
-        .kanban-column.drag-over {
+        [data-state-name].drag-over {
           border-color: var(--accent);
           border-style: dashed;
           border-width: 2px;
@@ -258,6 +292,42 @@ export class KanbanPanel {
           color: #fff;
           border-color: var(--accent);
         }
+        .sub-zone {
+          margin-top: 8px;
+          padding: 8px;
+          border: 1px solid var(--card-border);
+          border-radius: 4px;
+          min-height: 36px;
+          transition: border-color 0.15s;
+        }
+        .sub-zone-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+        }
+        .sub-zone-title {
+          font-weight: 600;
+          font-size: 0.85em;
+          color: var(--muted-fg);
+        }
+        .show-collapsed-btn {
+          display: block;
+          width: 100%;
+          padding: 6px 8px;
+          margin-top: 6px;
+          background: none;
+          border: 1px dashed var(--card-border);
+          border-radius: 4px;
+          color: var(--muted-fg);
+          cursor: pointer;
+          font-size: 0.8em;
+          text-align: center;
+        }
+        .show-collapsed-btn:hover {
+          border-color: var(--accent);
+          color: var(--accent);
+        }
       </style>
     `;
 
@@ -265,7 +335,8 @@ export class KanbanPanel {
     return html;
   }
 
-  private buildColumn(state: StateViewData): string {
+  /** Standard column (used for In Progress and custom states) */
+  private buildStandardColumn(state: StateViewData): string {
     const cards = state.tasks.map((t) => this.buildCard(t)).join('\n');
     const showMore = state.hasMore
       ? `<div class="show-more" data-action="showAll" data-state-name="${state.name}">Showing ${state.tasks.length} of ${state.totalCount} — Show all</div>`
@@ -284,6 +355,137 @@ export class KanbanPanel {
         ${cards}
         ${empty}
         ${showMore}
+      </div>
+    `;
+  }
+
+  /** Next column with Backlog sub-section */
+  private buildNextBacklogColumn(nextState?: StateViewData, backlogState?: StateViewData): string {
+    // Next section
+    let nextHtml = '';
+    if (nextState) {
+      const cards = nextState.tasks.map((t) => this.buildCard(t)).join('\n');
+      const showMore = nextState.hasMore
+        ? `<div class="show-more" data-action="showAll" data-state-name="Next">Showing ${nextState.tasks.length} of ${nextState.totalCount} — Show all</div>`
+        : '';
+      const empty = nextState.tasks.length === 0 ? '<div class="empty-state">No tasks</div>' : '';
+      nextHtml = `${cards}${empty}${showMore}`;
+    }
+
+    // Backlog sub-section
+    let backlogHtml = '';
+    if (backlogState) {
+      const backlogExpanded = this.showAllForState.has('Backlog');
+      let backlogContent: string;
+
+      if (backlogExpanded && backlogState.tasks.length > 0) {
+        const backlogCards = backlogState.tasks.map((t) => this.buildCard(t)).join('\n');
+        backlogContent = backlogCards;
+      } else if (backlogState.totalCount > 0) {
+        backlogContent = `
+          <button class="show-collapsed-btn" data-action="showAll" data-state-name="Backlog">
+            Show Backlog (${backlogState.totalCount} tasks)
+          </button>`;
+      } else {
+        backlogContent = '<div class="empty-state">No tasks</div>';
+      }
+
+      backlogHtml = `
+        <div class="sub-zone" data-state-name="Backlog">
+          <div class="sub-zone-header">
+            <span class="sub-zone-title">Backlog</span>
+            <span class="count-badge">${backlogState.totalCount}</span>
+          </div>
+          ${backlogContent}
+        </div>`;
+    }
+
+    return `
+      <div class="kanban-column">
+        <div data-state-name="Next">
+          <div class="column-header">
+            <span class="column-title">Next</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="count-badge">${nextState?.totalCount ?? 0}</span>
+              <button class="add-btn" data-action="addTask" data-state-name="Next" title="Add task to Next">+</button>
+            </div>
+          </div>
+          ${nextHtml}
+        </div>
+        ${backlogHtml}
+      </div>
+    `;
+  }
+
+  /** Completed column: Done + Rejected merged */
+  private buildCompletedColumn(doneState?: StateViewData, rejectedState?: StateViewData): string {
+    const doneCount = doneState?.totalCount ?? 0;
+    const rejectedCount = rejectedState?.totalCount ?? 0;
+    const totalCompleted = doneCount + rejectedCount;
+    const isExpanded = this.showAllForState.has('Done') || this.showAllForState.has('Rejected');
+
+    let innerContent: string;
+
+    if (isExpanded) {
+      // Show Done and Rejected as sub-zones with cards
+      let doneHtml = '';
+      if (doneState) {
+        const cards = doneState.tasks.map((t) => this.buildCard(t)).join('\n');
+        const empty = doneState.tasks.length === 0 ? '<div class="empty-state">No tasks</div>' : '';
+        doneHtml = `
+          <div class="sub-zone" data-state-name="Done">
+            <div class="sub-zone-header">
+              <span class="sub-zone-title">Done</span>
+              <span class="count-badge">${doneCount}</span>
+            </div>
+            ${cards}${empty}
+          </div>`;
+      }
+
+      let rejectedHtml = '';
+      if (rejectedState) {
+        const cards = rejectedState.tasks.map((t) => this.buildCard(t)).join('\n');
+        const empty = rejectedState.tasks.length === 0 ? '<div class="empty-state">No tasks</div>' : '';
+        rejectedHtml = `
+          <div class="sub-zone" data-state-name="Rejected">
+            <div class="sub-zone-header">
+              <span class="sub-zone-title">Rejected</span>
+              <span class="count-badge">${rejectedCount}</span>
+            </div>
+            ${cards}${empty}
+          </div>`;
+      }
+
+      innerContent = `${doneHtml}${rejectedHtml}`;
+    } else {
+      // Collapsed: show drop zones and a button
+      const showButton = totalCompleted > 0
+        ? `<button class="show-collapsed-btn" data-action="showCompleted">Show ${totalCompleted} completed tasks</button>`
+        : '';
+
+      innerContent = `
+        <div class="sub-zone" data-state-name="Done">
+          <div class="sub-zone-header">
+            <span class="sub-zone-title">Done</span>
+            <span class="count-badge">${doneCount}</span>
+          </div>
+        </div>
+        <div class="sub-zone" data-state-name="Rejected">
+          <div class="sub-zone-header">
+            <span class="sub-zone-title">Rejected</span>
+            <span class="count-badge">${rejectedCount}</span>
+          </div>
+        </div>
+        ${showButton}`;
+    }
+
+    return `
+      <div class="kanban-column">
+        <div class="column-header">
+          <span class="column-title">Completed</span>
+          <span class="count-badge">${totalCompleted}</span>
+        </div>
+        ${innerContent}
       </div>
     `;
   }

@@ -9,6 +9,7 @@ export interface TaskPlannerConfig {
   tags: string[];
   insertPosition: 'top' | 'bottom';
   aiPlanRequired: boolean;
+  sortBy: 'priority' | 'name' | 'id';
 }
 
 export function createDefaultConfig(): TaskPlannerConfig {
@@ -21,5 +22,6 @@ export function createDefaultConfig(): TaskPlannerConfig {
     tags: [],
     insertPosition: 'top',
     aiPlanRequired: true,
+    sortBy: 'priority',
   };
 }

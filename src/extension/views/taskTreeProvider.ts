@@ -3,6 +3,7 @@ import { TaskStore } from '../../core/store/taskStore.js';
 import { ConfigManager } from '../../core/config/configManager.js';
 import { Task } from '../../core/model/task.js';
 import { TaskState } from '../../core/model/state.js';
+import { sortTasks } from '../../core/filter/taskFilter.js';
 
 export class TaskTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   private _onDidChangeTreeData = new vscode.EventEmitter<TreeNode | undefined | null | void>();
@@ -36,9 +37,9 @@ export class TaskTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
     if (element instanceof StateTreeItem) {
       // Children of a state: task items
-      return this.taskStore
-        .getTasksByState(element.state.name)
-        .map((task) => new TaskTreeItem(task, element.state.name));
+      const sortBy = this.configManager.get().sortBy ?? 'priority';
+      const tasks = sortTasks(this.taskStore.getTasksByState(element.state.name), sortBy);
+      return tasks.map((task) => new TaskTreeItem(task, element.state.name));
     }
 
     return [];
@@ -52,7 +53,8 @@ export class StateTreeItem extends vscode.TreeItem {
     public readonly state: TaskState,
     taskCount: number,
   ) {
-    super(state.name, vscode.TreeItemCollapsibleState.Expanded);
+    const expanded = state.name === 'In Progress' || state.name === 'Next';
+    super(state.name, expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed);
     this.description = `(${taskCount})`;
     this.contextValue = 'state';
     this.iconPath = new vscode.ThemeIcon('list-unordered');
@@ -107,6 +109,41 @@ export class TaskTreeItem extends vscode.TreeItem {
         return new vscode.ThemeIcon('circle-outline');
       default:
         return new vscode.ThemeIcon('circle-outline');
+    }
+  }
+}
+
+const TREE_MIME_TYPE = 'application/vnd.code.tree.taskplannerTaskView';
+
+export class TaskDragAndDropController implements vscode.TreeDragAndDropController<TreeNode> {
+  readonly dropMimeTypes = [TREE_MIME_TYPE];
+  readonly dragMimeTypes = [TREE_MIME_TYPE];
+
+  constructor(private taskStore: TaskStore) {}
+
+  handleDrag(source: readonly TreeNode[], dataTransfer: vscode.DataTransfer): void {
+    const tasks = source.filter((n): n is TaskTreeItem => n instanceof TaskTreeItem);
+    if (tasks.length === 0) return;
+    dataTransfer.set(TREE_MIME_TYPE, new vscode.DataTransferItem(tasks.map((t) => t.task.id)));
+  }
+
+  handleDrop(target: TreeNode | undefined, dataTransfer: vscode.DataTransfer): void {
+    const item = dataTransfer.get(TREE_MIME_TYPE);
+    if (!item || !target) return;
+
+    const taskIds = item.value as string[];
+    let targetStateName: string;
+
+    if (target instanceof StateTreeItem) {
+      targetStateName = target.state.name;
+    } else if (target instanceof TaskTreeItem) {
+      targetStateName = target.stateName;
+    } else {
+      return;
+    }
+
+    for (const taskId of taskIds) {
+      this.taskStore.moveTask(taskId, targetStateName);
     }
   }
 }

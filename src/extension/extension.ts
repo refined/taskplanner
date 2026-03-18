@@ -4,7 +4,7 @@ import * as path from 'path';
 import { ConfigManager } from '../core/config/configManager.js';
 import { FileStore } from '../core/store/fileStore.js';
 import { TaskStore } from '../core/store/taskStore.js';
-import { TaskTreeProvider } from './views/taskTreeProvider.js';
+import { TaskTreeProvider, TaskDragAndDropController } from './views/taskTreeProvider.js';
 import { registerInitCommand } from './commands/initProject.js';
 import { registerInitAiCommand } from './commands/initAi.js';
 import { registerSetupCommand } from './commands/setup.js';
@@ -43,9 +43,11 @@ export function activate(context: vscode.ExtensionContext) {
   const treeProvider = new TaskTreeProvider(taskStore, configManager, () =>
     fs.existsSync(tasksDir),
   );
+  const dragAndDropController = new TaskDragAndDropController(taskStore);
   const treeView = vscode.window.createTreeView('taskplanner.taskView', {
     treeDataProvider: treeProvider,
     showCollapseAll: true,
+    dragAndDropController,
   });
 
   // Listen for task store changes to refresh tree

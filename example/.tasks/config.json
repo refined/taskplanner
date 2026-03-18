@@ -1,14 +1,51 @@
 {
-  "version": 1,
+  "version": 2,
   "idPrefix": "TASK",
   "nextId": 13,
   "states": [
-    { "name": "Backlog", "fileName": "BACKLOG.md", "order": 0 },
-    { "name": "Next", "fileName": "NEXT.md", "order": 1 },
-    { "name": "In Progress", "fileName": "IN_PROGRESS.md", "order": 2 },
-    { "name": "Done", "fileName": "DONE.md", "order": 3 }
+    {
+      "name": "Backlog",
+      "fileName": "BACKLOG.md",
+      "order": 0
+    },
+    {
+      "name": "Next",
+      "fileName": "NEXT.md",
+      "order": 1
+    },
+    {
+      "name": "In Progress",
+      "fileName": "IN_PROGRESS.md",
+      "order": 2
+    },
+    {
+      "name": "Done",
+      "fileName": "DONE.md",
+      "order": 3
+    },
+    {
+      "name": "Rejected",
+      "fileName": "REJECTED.md",
+      "order": 4
+    }
   ],
-  "priorities": ["P1", "P2", "P3", "P4"],
-  "tags": ["ui", "backend", "bug", "feature", "docs", "refactor", "testing", "performance"],
-  "insertPosition": "top"
+  "priorities": [
+    "P1",
+    "P2",
+    "P3",
+    "P4"
+  ],
+  "tags": [
+    "ui",
+    "backend",
+    "bug",
+    "feature",
+    "docs",
+    "refactor",
+    "testing",
+    "performance"
+  ],
+  "insertPosition": "top",
+  "aiPlanRequired": true,
+  "sortBy": "priority"
 }

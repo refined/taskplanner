@@ -79,13 +79,15 @@ export class TaskListPanel {
   }
 
   private update(): void {
-    const states = this.configManager.get().states;
+    const config = this.configManager.get();
+    const states = config.states;
+    const sortBy = config.sortBy ?? 'priority';
     const allTasks = this.taskStore.getAllTasks();
-    const data = filterAndPaginate(allTasks, states, this.filter);
+    const data = filterAndPaginate(allTasks, states, this.filter, undefined, sortBy);
 
     // Apply per-state "show all" overrides
     if (this.showAllForState.size > 0) {
-      const unlimitedData = filterAndPaginate(allTasks, states, this.filter, null);
+      const unlimitedData = filterAndPaginate(allTasks, states, this.filter, null, sortBy);
       for (const state of data.states) {
         if (this.showAllForState.has(state.name)) {
           const full = unlimitedData.states.find((s) => s.name === state.name);
