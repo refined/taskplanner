@@ -4,7 +4,6 @@ import * as path from 'path';
 import { ConfigManager } from '../core/config/configManager.js';
 import { FileStore } from '../core/store/fileStore.js';
 import { TaskStore } from '../core/store/taskStore.js';
-import { TaskTreeProvider, TaskDragAndDropController } from './views/taskTreeProvider.js';
 import { registerInitCommand } from './commands/initProject.js';
 import { registerInitAiCommand } from './commands/initAi.js';
 import { registerSetupCommand } from './commands/setup.js';
@@ -13,7 +12,7 @@ import { registerMoveTaskCommand } from './commands/moveTask.js';
 import { registerDeleteTaskCommand } from './commands/deleteTask.js';
 import { registerOpenTaskCommand } from './commands/openTask.js';
 import { createFileWatcher } from './watchers/fileWatcher.js';
-import { TaskListPanel } from './views/webview/taskListPanel.js';
+import { TaskListViewProvider } from './views/webview/taskListPanel.js';
 import { KanbanPanel } from './views/webview/kanbanPanel.js';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -39,21 +38,14 @@ export function activate(context: vscode.ExtensionContext) {
     taskStore.reload();
   }
 
-  // Tree view
-  const treeProvider = new TaskTreeProvider(taskStore, configManager, () =>
-    fs.existsSync(tasksDir),
+  // Sidebar webview view
+  const taskListProvider = new TaskListViewProvider(
+    taskStore, configManager, () => fs.existsSync(tasksDir),
   );
-  const dragAndDropController = new TaskDragAndDropController(taskStore);
-  const treeView = vscode.window.createTreeView('taskplanner.taskView', {
-    treeDataProvider: treeProvider,
-    showCollapseAll: true,
-    dragAndDropController,
-  });
-
-  // Listen for task store changes to refresh tree
-  const storeDisposable = taskStore.onDidChange(() => {
-    treeProvider.refresh();
-  });
+  const viewProviderDisposable = vscode.window.registerWebviewViewProvider(
+    TaskListViewProvider.viewType,
+    taskListProvider,
+  );
 
   // Commands
   registerInitCommand(context, configManager, fileStore, taskStore);
@@ -75,7 +67,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Webview panel commands
   context.subscriptions.push(
     vscode.commands.registerCommand('taskplanner.openTaskList', () => {
-      TaskListPanel.createOrShow(taskStore, configManager);
+      vscode.commands.executeCommand('taskplanner.taskView.focus');
     }),
     vscode.commands.registerCommand('taskplanner.openKanban', () => {
       KanbanPanel.createOrShow(taskStore, configManager);
@@ -85,7 +77,7 @@ export function activate(context: vscode.ExtensionContext) {
   // File watcher
   const watcher = createFileWatcher(workspaceFolder.uri.fsPath, taskDirName, configManager, taskStore);
 
-  context.subscriptions.push(treeView, storeDisposable, watcher);
+  context.subscriptions.push(viewProviderDisposable, watcher);
 }
 
 export function deactivate() {

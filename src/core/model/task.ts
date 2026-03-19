@@ -13,6 +13,8 @@ export interface Task {
   priority: Priority;
   tags: string[];
   epic?: string;
+  assignee?: string;
+  updatedAt?: string;
 }
 
 export function isPriority(value: string): value is Priority {

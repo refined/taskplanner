@@ -16,10 +16,11 @@ Markdown-based task tracking built for AI-assisted development. Tasks live in yo
 
 ## Features
 
+- **Filtered task list** — main view with grouping by status, assignee, date, or no grouping; search across all fields; Backlog/Done/Rejected hidden by default
 - **Kanban board** — drag-and-drop cards between columns, visual priority indicators
-- **Filtered task list** — search by ID or title, filter by state
 - **Sidebar tree view** — tasks grouped by state (Backlog → Next → In Progress → Done)
 - **Drag-and-drop** — move tasks between states in tree view and Kanban board
+- **Assignee & timestamps** — track who owns each task and when it was last updated
 - **AI instruction generation** — auto-generates `CLAUDE.md` and `.cursorrules` that teach agents your task workflow
 - **AI planning mode** — agents write a `### Plan` inside the task before coding
 - **Live file watcher** — edit `.tasks/*.md` by hand and all views update instantly
@@ -45,15 +46,16 @@ Tasks are stored in `.tasks/` as plain markdown:
 ├── BACKLOG.md
 ├── NEXT.md
 ├── IN_PROGRESS.md
-└── DONE.md
+├── DONE.md
+└── REJECTED.md
 ```
 
 Each task is a `##` heading section:
 
 ```markdown
 ## TASK-001: Set up OAuth2 authentication
-**Priority:** P0
-**Tags:** auth, backend
+**Priority:** P0 | **Tags:** auth, backend | **Assignee:** Alice
+**Updated:** 2026-03-19 14:30
 
 Implement OAuth2 flow with Google and GitHub providers.
 Add token refresh logic and session management.
@@ -61,8 +63,8 @@ Add token refresh logic and session management.
 ---
 
 ## TASK-002: Add rate limiting to API endpoints
-**Priority:** P1
-**Tags:** api, security
+**Priority:** P1 | **Tags:** api, security | **Assignee:** Bob
+**Updated:** 2026-03-18 09:15
 
 Apply rate limiting middleware to all public endpoints.
 Use sliding window algorithm, 100 req/min per API key.
@@ -79,6 +81,10 @@ Use sliding window algorithm, 100 req/min per API key.
 | P2 | High | Orange |
 | P3 | Medium | Blue |
 | P4 | Low | Grey |
+
+### Assignee & Updated
+
+Each task can have an optional **Assignee** (who owns the task) and an **Updated** timestamp (auto-set when tasks are created, moved, or edited). Both fields are searchable in the filtered task list.
 
 ## AI Agent Workflow
 
@@ -98,8 +104,8 @@ When enabled (default), agents must write a plan before coding. The plan lives i
 
 ```markdown
 ## TASK-003: Migrate database to PostgreSQL
-**Priority:** P1
-**Tags:** database, migration
+**Priority:** P1 | **Tags:** database, migration | **Assignee:** Claude
+**Updated:** 2026-03-19 10:00
 
 Replace SQLite with PostgreSQL for production readiness.
 
@@ -121,13 +127,19 @@ When `autoInitAiFiles` is enabled (default), AI instruction files are automatica
 
 ## Views
 
+### Filtered Task List (Main View)
+
+The primary view opens automatically when you click the TaskPlanner sidebar icon. Features:
+
+- **Grouping** — group tasks by Status (default), Assignee, Date, or no grouping
+- **Collapsible groups** — Backlog, Done, and Rejected are collapsed by default to focus on active work
+- **Search** — search across task ID, title, assignee, and date
+- **Status filter** — filter to a specific state
+- **Task actions** — move between states, delete, open in editor
+
 ### Kanban Board
 
-Open via command palette → `TaskPlanner: Open Kanban Board`. Columns map to task states. Drag cards between columns to change state. Task titles wrap fully — no truncation.
-
-### Filtered Task List
-
-Open via command palette → `TaskPlanner: Open Filtered Task List`. Search tasks by ID or title, filter by state.
+Open via command palette → `TaskPlanner: Open Kanban Board`. Columns map to task states. Drag cards between columns to change state. Task cards show assignee and last update time.
 
 ### Sidebar Tree
 
@@ -157,19 +169,21 @@ Project config (`.tasks/config.json`):
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "idPrefix": "TASK",
   "nextId": 1,
   "states": [
     { "name": "Backlog", "fileName": "BACKLOG.md", "order": 0 },
     { "name": "Next", "fileName": "NEXT.md", "order": 1 },
     { "name": "In Progress", "fileName": "IN_PROGRESS.md", "order": 2 },
-    { "name": "Done", "fileName": "DONE.md", "order": 3 }
+    { "name": "Done", "fileName": "DONE.md", "order": 3 },
+    { "name": "Rejected", "fileName": "REJECTED.md", "order": 4 }
   ],
   "priorities": ["P0", "P1", "P2", "P3", "P4"],
   "tags": [],
   "insertPosition": "top",
-  "aiPlanRequired": true
+  "aiPlanRequired": true,
+  "sortBy": "priority"
 }
 ```
 
@@ -190,3 +204,5 @@ Project config (`.tasks/config.json`):
 ## License
 
 GPL v3
+
+This project is licensed under the GNU General Public License v3.0. This means you are free to use, modify, and distribute this software, but any derivative work must also be distributed under the same GPL v3 license and include the source code. The license ensures that the software and all modifications remain free and open source, protecting users' freedom to run, study, share, and modify the software.

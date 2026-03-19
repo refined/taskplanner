@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { TaskStore } from '../../core/store/taskStore.js';
 import { ConfigManager } from '../../core/config/configManager.js';
-import { TaskTreeItem } from '../views/taskTreeProvider.js';
 
 export function registerMoveTaskCommand(
   context: vscode.ExtensionContext,
@@ -9,12 +8,10 @@ export function registerMoveTaskCommand(
   configManager: ConfigManager,
 ) {
   context.subscriptions.push(
-    vscode.commands.registerCommand('taskplanner.moveTask', async (item?: TaskTreeItem | string) => {
+    vscode.commands.registerCommand('taskplanner.moveTask', async (item?: string) => {
       let taskId: string;
 
-      if (item instanceof TaskTreeItem) {
-        taskId = item.task.id;
-      } else if (typeof item === 'string') {
+      if (typeof item === 'string') {
         taskId = item;
       } else {
         // Prompt user to pick a task

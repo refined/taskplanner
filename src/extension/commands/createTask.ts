@@ -52,6 +52,12 @@ export function registerCreateTaskCommand(
           .filter(Boolean)
       : [];
 
+    // Assignee (optional)
+    const assignee = await vscode.window.showInputBox({
+      prompt: 'Assignee (optional)',
+      placeHolder: 'e.g., John',
+    });
+
     try {
       const task = taskStore.createTask(
         {
@@ -59,6 +65,7 @@ export function registerCreateTaskCommand(
           priority,
           tags,
           description: description?.trim() ?? '',
+          assignee: assignee?.trim() || undefined,
         },
         targetState,
       );

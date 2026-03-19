@@ -13,7 +13,14 @@ export function serializeTask(task: Task): string {
   if (task.epic) {
     metaParts.push(`**Epic:** ${task.epic}`);
   }
+  if (task.assignee) {
+    metaParts.push(`**Assignee:** ${task.assignee}`);
+  }
   lines.push(metaParts.join(' | '));
+
+  if (task.updatedAt) {
+    lines.push(`**Updated:** ${task.updatedAt}`);
+  }
 
   if (task.description.trim()) {
     lines.push('');

@@ -3,7 +3,6 @@ import { TaskStore } from '../../core/store/taskStore.js';
 import { FileStore } from '../../core/store/fileStore.js';
 import { ConfigManager } from '../../core/config/configManager.js';
 import { findTaskLineNumber } from '../../core/parser/taskParser.js';
-import { TaskTreeItem } from '../views/taskTreeProvider.js';
 
 export function registerOpenTaskCommand(
   context: vscode.ExtensionContext,
@@ -12,16 +11,11 @@ export function registerOpenTaskCommand(
   configManager: ConfigManager,
 ) {
   context.subscriptions.push(
-    vscode.commands.registerCommand('taskplanner.openTask', async (item?: TaskTreeItem | string) => {
-      let taskId: string;
-
-      if (item instanceof TaskTreeItem) {
-        taskId = item.task.id;
-      } else if (typeof item === 'string') {
-        taskId = item;
-      } else {
+    vscode.commands.registerCommand('taskplanner.openTask', async (item?: string) => {
+      if (typeof item !== 'string') {
         return;
       }
+      const taskId = item;
 
       const found = taskStore.findTask(taskId);
       if (!found) {

@@ -7,6 +7,8 @@ export interface TaskViewItem {
   priority: Priority;
   tags: string[];
   epic?: string;
+  assignee?: string;
+  updatedAt?: string;
   description: string;
 }
 
@@ -26,6 +28,16 @@ export interface TaskViewData {
 export interface TaskFilter {
   status?: string;
   query?: string;
+  groupBy?: 'status' | 'assignee' | 'date' | 'none';
+}
+
+/** Grouped task view for the task list panel */
+export interface GroupViewData {
+  label: string;
+  tasks: TaskViewItem[];
+  totalCount: number;
+  hasMore: boolean;
+  collapsed?: boolean;
 }
 
 /** Messages from webview to extension host */

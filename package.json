@@ -47,6 +47,7 @@
         {
           "id": "taskplanner.taskView",
           "name": "Tasks",
+          "type": "webview",
           "icon": "resources/icons/taskplanner.svg",
           "contextualTitle": "TaskPlanner"
         }
@@ -116,13 +117,6 @@
         "icon": "$(gear)"
       }
     ],
-    "viewsWelcome": [
-      {
-        "view": "taskplanner.taskView",
-        "contents": "No TaskPlanner project found in this workspace.\n[$(folder-opened) Initialize Project](command:taskplanner.init)\n[$(gear) Setup](command:taskplanner.setup)",
-        "when": "!taskplanner:initialized"
-      }
-    ],
     "menus": {
       "view/title": [
         {
@@ -149,25 +143,6 @@
           "command": "taskplanner.setup",
           "when": "view == taskplanner.taskView",
           "group": "navigation"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "taskplanner.moveTask",
-          "when": "view == taskplanner.taskView && viewItem == task"
-        },
-        {
-          "command": "taskplanner.editTask",
-          "when": "view == taskplanner.taskView && viewItem == task"
-        },
-        {
-          "command": "taskplanner.deleteTask",
-          "when": "view == taskplanner.taskView && viewItem == task"
-        },
-        {
-          "command": "taskplanner.openTask",
-          "when": "view == taskplanner.taskView && viewItem == task",
-          "group": "inline"
         }
       ]
     },

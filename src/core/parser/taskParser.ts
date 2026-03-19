@@ -4,6 +4,8 @@ const TASK_HEADING_RE = /^## ([A-Z]+-\d+):\s*(.+)$/;
 const PRIORITY_RE = /^\*\*Priority:\*\*\s*(\S+)/;
 const TAGS_RE = /^\*\*Tags?:\*\*\s*(.+)/;
 const EPIC_RE = /^\*\*Epic:\*\*\s*(.+)/;
+const ASSIGNEE_RE = /^\*\*Assignee:\*\*\s*(.+)/;
+const UPDATED_RE = /^\*\*Updated:\*\*\s*(.+)/;
 const SEPARATOR_RE = /^---\s*$/;
 
 export function parseTasks(content: string): Task[] {
@@ -22,6 +24,8 @@ export function parseTasks(content: string): Task[] {
         priority: current.priority ?? Priority.P4,
         tags: current.tags ?? [],
         epic: current.epic,
+        assignee: current.assignee,
+        updatedAt: current.updatedAt,
       });
     }
     current = null;
@@ -78,6 +82,20 @@ export function parseTasks(content: string): Task[] {
         const epicMatch = segment.match(EPIC_RE);
         if (epicMatch) {
           current.epic = epicMatch[1].trim();
+          matchedAny = true;
+          continue;
+        }
+
+        const assigneeMatch = segment.match(ASSIGNEE_RE);
+        if (assigneeMatch) {
+          current.assignee = assigneeMatch[1].trim();
+          matchedAny = true;
+          continue;
+        }
+
+        const updatedMatch = segment.match(UPDATED_RE);
+        if (updatedMatch) {
+          current.updatedAt = updatedMatch[1].trim();
           matchedAny = true;
           continue;
         }

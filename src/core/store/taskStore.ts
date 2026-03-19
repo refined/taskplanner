@@ -56,6 +56,10 @@ export class TaskStore {
     return null;
   }
 
+  private static now(): string {
+    return new Date().toISOString().replace('T', ' ').slice(0, 16);
+  }
+
   createTask(task: Omit<Task, 'id'>, stateName: string): Task {
     const state = this.findState(stateName);
     if (!state) {
@@ -63,7 +67,7 @@ export class TaskStore {
     }
 
     const id = this.idGenerator.next();
-    const newTask: Task = { ...task, id };
+    const newTask: Task = { ...task, id, updatedAt: TaskStore.now() };
 
     const tasks = this.getTasksByState(stateName);
     if (this.config.insertPosition === 'top') {
@@ -95,7 +99,8 @@ export class TaskStore {
     this.tasksByState.set(found.stateName, sourceTasks);
     this.fileStore.writeState(sourceState, sourceTasks);
 
-    // Add to target
+    // Add to target with updated timestamp
+    found.task.updatedAt = TaskStore.now();
     const targetTasks = this.getTasksByState(targetStateName);
     if (this.config.insertPosition === 'top') {
       targetTasks.unshift(found.task);
@@ -138,7 +143,7 @@ export class TaskStore {
       return null;
     }
 
-    const updatedTask: Task = { ...found.task, ...updates, id: taskId };
+    const updatedTask: Task = { ...found.task, ...updates, id: taskId, updatedAt: TaskStore.now() };
     const tasks = this.getTasksByState(found.stateName).map((t) =>
       t.id === taskId ? updatedTask : t,
     );

@@ -493,6 +493,17 @@ export class KanbanPanel {
   private buildCard(task: TaskViewItem): string {
     const tags = task.tags.map((t) => `<span class="tag">${this.escapeHtml(t)}</span>`).join('');
 
+    const metaParts: string[] = [];
+    if (task.assignee) {
+      metaParts.push(`<span style="font-size:0.8em;color:var(--muted-fg);">&#128100; ${this.escapeHtml(task.assignee)}</span>`);
+    }
+    if (task.updatedAt) {
+      metaParts.push(`<span style="font-size:0.8em;color:var(--muted-fg);">&#128339; ${this.escapeHtml(task.updatedAt)}</span>`);
+    }
+    const metaHtml = metaParts.length > 0
+      ? `<div style="display:flex;gap:6px;margin-top:3px;flex-wrap:wrap;">${metaParts.join('')}</div>`
+      : '';
+
     return `
       <div class="kanban-card" draggable="true" data-task-id="${task.id}">
         <div class="card-top">
@@ -503,10 +514,11 @@ export class KanbanPanel {
               <span class="task-title" data-action="open" data-task-id="${task.id}" style="cursor:pointer;">${this.escapeHtml(task.title)}</span>
             </div>
             ${tags ? `<div class="task-tags">${tags}</div>` : ''}
+            ${metaHtml}
           </div>
         </div>
         <div class="card-move-row">
-          <button class="action-btn danger" data-action="delete" data-task-id="${task.id}" style="font-size:0.75em;" title="Delete">✕</button>
+          <button class="action-btn danger" data-action="delete" data-task-id="${task.id}" style="font-size:0.75em;" title="Delete">&#10005;</button>
         </div>
       </div>
     `;
