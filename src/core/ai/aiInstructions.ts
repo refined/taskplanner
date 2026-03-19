@@ -84,6 +84,34 @@ ${config.aiPlanRequired ? '4' : '3'}. **Implement** the task.
 ${config.aiPlanRequired ? '5' : '4'}. **Move the task** to DONE.md when complete.
 ${planSection}
 
+## Creating a New Task
+
+When the user asks you to create a task:
+
+1. **Read** \`.tasks/config.json\` to get the current \`nextId\` and \`idPrefix\`.
+2. **Generate the ID** — format: \`{idPrefix}-{nextId padded to 3 digits}\` (e.g. \`${config.idPrefix}-015\`).
+3. **Increment \`nextId\`** in \`.tasks/config.json\` and save the file.
+4. **Write the task** into \`BACKLOG.md\` (or the file the user specifies) using this format:
+
+\`\`\`markdown
+## ${idExample}: Task title
+**Priority:** P2
+**Tags:** tag1, tag2
+**Updated:** YYYY-MM-DD HH:mm
+
+Description of the task in markdown.
+
+---
+\`\`\`
+
+Rules for new tasks:
+- **Priority** is required. If not specified by the user, default to \`P2\`.
+- **Tags** are optional. Pick from the project's tag list if relevant: ${config.tags.length > 0 ? config.tags.join(', ') : '(none configured)'}.
+- **Updated** — set to the current date/time.
+- Add the task at the **${config.insertPosition}** of the file (after the \`# Heading\` line).
+- Always end the task section with a \`---\` separator.
+- If the user asks to create multiple tasks at once, increment the ID for each one.
+
 ## Important Rules
 
 - Do NOT change task IDs.

@@ -34,5 +34,11 @@ When implementing tasks, follow the task conventions used by TaskPlanner:
   4. Implement the task
   5. Move it to `DONE.md` when complete
 
-Note: the extension command `TaskPlanner: Initialize AI Instructions` updates root `.cursorrules` and `CLAUDE.md` (idempotent via markers). This `.cursor/rules` directory is separate and intended for persistent developer guidance.
+When asked to **create a new task**:
+  1. Read `.tasks/config.json` to get `nextId` and `idPrefix`
+  2. Generate the ID: `{idPrefix}-{nextId padded to 3 digits}` (e.g. `TASK-015`)
+  3. Increment `nextId` in `config.json` and save
+  4. Write the task into `BACKLOG.md` (or the file the user specifies), respecting `insertPosition` (top/bottom, after the `# Heading` line)
+  5. Use the standard format: `## TASK-###: Title`, `**Priority:**`, optional `**Tags:**`, `**Updated:**`, description, and `---` separator
 
+Note: the extension command `TaskPlanner: Initialize AI Instructions` updates root `.cursorrules` and `CLAUDE.md` (idempotent via markers). This `.cursor/rules` directory is separate and intended for persistent developer guidance.
