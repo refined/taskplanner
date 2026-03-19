@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { ConfigManager } from '../../core/config/configManager.js';
 import { TaskStore } from '../../core/store/taskStore.js';
+import { checkAndPromptDuplicateConflicts } from '../commands/resolveConflicts.js';
 
 export function createFileWatcher(
   workspacePath: string,
@@ -18,12 +18,11 @@ export function createFileWatcher(
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }
-    debounceTimer = setTimeout(() => {
+    debounceTimer = setTimeout(async () => {
       try {
-        const config = configManager.get();
-        // Find which state file changed and reload just that state
-        // For simplicity, reload all states
+        configManager.get();
         taskStore.reload();
+        await checkAndPromptDuplicateConflicts(taskStore, configManager);
       } catch {
         // Ignore parse errors from in-progress edits
       }

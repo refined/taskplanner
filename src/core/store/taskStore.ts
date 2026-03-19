@@ -4,6 +4,7 @@ import { TaskPlannerConfig } from '../model/config.js';
 import { ConfigManager } from '../config/configManager.js';
 import { FileStore } from './fileStore.js';
 import { IdGenerator } from '../id/idGenerator.js';
+import { DuplicateResolution } from '../validation/duplicateDetector.js';
 
 export type TaskStoreListener = () => void;
 
@@ -192,6 +193,44 @@ export class TaskStore {
         }
       },
     };
+  }
+
+  fixDuplicates(resolutions: DuplicateResolution[]): number {
+    let removedCount = 0;
+    const removalsByState = new Map<string, Set<number>>();
+
+    for (const resolution of resolutions) {
+      for (const duplicate of resolution.remove) {
+        const indexes = removalsByState.get(duplicate.stateName) ?? new Set<number>();
+        indexes.add(duplicate.index);
+        removalsByState.set(duplicate.stateName, indexes);
+      }
+    }
+
+    for (const [stateName, indexes] of removalsByState) {
+      const state = this.findState(stateName);
+      if (!state) {
+        continue;
+      }
+
+      const tasks = [...this.getTasksByState(stateName)];
+      const sortedIndexes = [...indexes].sort((a, b) => b - a);
+      for (const index of sortedIndexes) {
+        if (index >= 0 && index < tasks.length) {
+          tasks.splice(index, 1);
+          removedCount++;
+        }
+      }
+
+      this.tasksByState.set(stateName, tasks);
+      this.fileStore.writeState(state, tasks);
+    }
+
+    if (removedCount > 0) {
+      this.notifyListeners();
+    }
+
+    return removedCount;
   }
 
   private findState(stateName: string): TaskState | undefined {
