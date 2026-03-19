@@ -1,0 +1,38 @@
+---
+description: TaskPlanner repo overview and contributor workflow
+alwaysApply: true
+---
+
+# TaskPlanner (refined)
+
+This repo provides markdown-based task tracking stored as `.md` files under `.tasks/` (git-tracked and AI-friendly).
+
+## Tech stack
+
+- TypeScript (strict mode) + esbuild bundling
+- Unit tests: Vitest (`npm test`)
+- Lint: ESLint (`npm run lint`)
+- Format: Prettier (`npm run format`)
+
+## Code layout
+
+- `src/core/`: pure logic, no `vscode` dependency
+- `src/extension/`: VS Code extension shell (commands, views, providers, watchers)
+- `src/test/core/`: Vitest unit tests for core logic
+- `src/test/extension/`: integration tests (via `@vscode/test-cli`)
+
+## Task workflow for agents (task-agent instructions)
+
+When implementing tasks, follow the task conventions used by TaskPlanner:
+
+- Tasks live in `.tasks/*.md` as `## TASK-###: ...` sections
+- Tasks are separated by `---`
+- Agents should:
+  1. Pick the task from `NEXT.md` or `BACKLOG.md` (highest priority first)
+  2. Move it to `IN_PROGRESS.md` by removing it from the source file and pasting it into `IN_PROGRESS.md`
+  3. Add a `### Plan` subsection under the task heading when `aiPlanRequired` is enabled
+  4. Implement the task
+  5. Move it to `DONE.md` when complete
+
+Note: the extension command `TaskPlanner: Initialize AI Instructions` updates root `.cursorrules` and `CLAUDE.md` (idempotent via markers). This `.cursor/rules` directory is separate and intended for persistent developer guidance.
+

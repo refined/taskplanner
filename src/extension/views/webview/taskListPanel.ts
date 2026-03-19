@@ -52,11 +52,30 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       }
     });
 
+    this.syncSettingsFromWorkspace();
     this.update();
   }
 
   public refresh(): void {
+    this.syncSettingsFromWorkspace();
     this.update();
+  }
+
+  private getSortByFromSettings(): 'priority' | 'name' | 'id' {
+    const value = vscode.workspace.getConfiguration('taskplanner').get<string>('sortBy', 'priority');
+    if (value === 'priority' || value === 'name' || value === 'id') return value;
+    return 'priority';
+  }
+
+  private getGroupByFromSettings(): 'status' | 'assignee' | 'date' | 'none' {
+    const value = vscode.workspace.getConfiguration('taskplanner').get<string>('groupBy', 'status');
+    if (value === 'status' || value === 'assignee' || value === 'date' || value === 'none') return value;
+    return 'status';
+  }
+
+  private syncSettingsFromWorkspace(): void {
+    this.sortBy = this.getSortByFromSettings();
+    this.filter.groupBy = this.getGroupByFromSettings();
   }
 
   public showTask(taskId: string): void {
@@ -70,9 +89,33 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         this.update();
         break;
       case 'applyFilter':
-        this.filter = (msg.filter as TaskFilter) ?? { groupBy: 'status' };
-        if (msg.sortBy) {
-          this.sortBy = msg.sortBy as 'priority' | 'name' | 'id';
+        {
+          const prevGroupBy = this.filter.groupBy ?? 'status';
+          const prevSortBy = this.sortBy;
+
+          this.filter = (msg.filter as TaskFilter) ?? { groupBy: 'status' };
+          if (msg.sortBy) {
+            this.sortBy = msg.sortBy as 'priority' | 'name' | 'id';
+          }
+
+          const nextGroupBy = this.filter.groupBy ?? 'status';
+          const nextSortBy = this.sortBy;
+
+          if (nextGroupBy !== prevGroupBy) {
+            void vscode.workspace.getConfiguration('taskplanner').update(
+              'groupBy',
+              nextGroupBy,
+              vscode.ConfigurationTarget.Workspace,
+            );
+          }
+
+          if (nextSortBy !== prevSortBy) {
+            void vscode.workspace.getConfiguration('taskplanner').update(
+              'sortBy',
+              nextSortBy,
+              vscode.ConfigurationTarget.Workspace,
+            );
+          }
         }
         this.showAllForGroup.clear();
         this.update();
@@ -115,13 +158,11 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           if (msg.tags !== undefined) updates.tags = msg.tags as string[];
           if (msg.assignee !== undefined) updates.assignee = (msg.assignee as string) || undefined;
           if (msg.epic !== undefined) updates.epic = (msg.epic as string) || undefined;
-          this.taskStore.updateTask(taskId, updates);
+          const updatedTask = this.taskStore.updateTask(taskId, updates);
+          if (updatedTask) {
+            vscode.window.showInformationMessage('Task saved.');
+          }
         }
-        break;
-      case 'deleteTask':
-        this.taskStore.deleteTask(msg.taskId as string);
-        this.activeTaskId = null;
-        this.update();
         break;
       case 'openInEditor':
         vscode.commands.executeCommand('taskplanner.openTask', msg.taskId as string);
@@ -218,10 +259,17 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
   private buildListHtml(groups: GroupViewData[], groupBy: string): string {
     const states = this.configManager.get().states;
-    const stateOptions = states.map((s) => {
-      const selected = this.filter.status === s.name ? ' selected' : '';
-      return `<option value="${s.name}"${selected}>${s.name}</option>`;
-    });
+    const statusFilterItems = [
+      { value: '', label: 'All statuses' },
+      ...states.map((s) => ({ value: s.name, label: s.name })),
+    ]
+      .map((o) => {
+        const isActive = o.value === ''
+          ? !this.filter.status
+          : this.filter.status === o.value;
+        return `<div class="popup-item${isActive ? ' active' : ''}" data-action="setStatus" data-value="${this.escapeAttr(o.value)}">${o.label}</div>`;
+      })
+      .join('\n');
 
     const groupByItems = [
       { value: 'status', label: 'Status' },
@@ -242,15 +290,11 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
     const filterBar = `
       <div class="filter-bar">
-        <div class="filter-top">
+        <div class="filter-search-row">
           <input type="text" id="queryFilter" placeholder="Search..."
             value="${this.escapeAttr(this.filter.query ?? '')}" />
-          <select id="statusFilter">
-            <option value=""${!this.filter.status ? ' selected' : ''}>All statuses</option>
-            ${stateOptions.join('\n')}
-          </select>
         </div>
-        <div class="filter-icons">
+        <div class="filter-controls">
           <div class="icon-btn-wrap">
             <button class="icon-btn${groupBy !== 'status' ? ' icon-btn-active' : ''}" id="groupByBtn" title="Group by: ${this.escapeAttr(groupBy)}">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14v1H1zm0 4h10v1H1zm0 4h14v1H1zm0-2h10v1H1z"/></svg>
@@ -269,6 +313,15 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
               ${sortByItems}
             </div>
           </div>
+          <div class="icon-btn-wrap">
+            <button class="icon-btn${this.filter.status ? ' icon-btn-active' : ''}" id="statusBtn" title="Status: ${this.escapeAttr(this.filter.status ?? 'All statuses')}">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1l-5 6v5l-2-1V9L2 3V2z"/></svg>
+            </button>
+            <div class="popup-menu" id="statusMenu">
+              <div class="popup-label">Status</div>
+              ${statusFilterItems}
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -283,8 +336,9 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     `;
 
     const script = `
-      const statusEl = document.getElementById('statusFilter');
       const queryEl = document.getElementById('queryFilter');
+      const statusBtn = document.getElementById('statusBtn');
+      const statusMenu = document.getElementById('statusMenu');
       const groupByBtn = document.getElementById('groupByBtn');
       const groupByMenu = document.getElementById('groupByMenu');
       const sortByBtn = document.getElementById('sortByBtn');
@@ -292,6 +346,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
       let currentGroupBy = ${JSON.stringify(groupBy)};
       let currentSortBy = ${JSON.stringify(this.sortBy)};
+      let currentStatus = ${JSON.stringify(this.filter.status ?? '')};
 
       let debounceTimer;
       function applyFilter() {
@@ -300,7 +355,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           vscode.postMessage({
             type: 'applyFilter',
             filter: {
-              status: statusEl.value || undefined,
+              status: currentStatus || undefined,
               query: queryEl.value || undefined,
               groupBy: currentGroupBy
             },
@@ -309,7 +364,6 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         }, 200);
       }
 
-      statusEl.addEventListener('change', applyFilter);
       queryEl.addEventListener('input', applyFilter);
 
       // Restore focus to search when re-rendered with an active query
@@ -339,6 +393,13 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         if (!isOpen) sortByMenu.classList.add('open');
       });
 
+      statusBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = statusMenu.classList.contains('open');
+        closeAllMenus();
+        if (!isOpen) statusMenu.classList.add('open');
+      });
+
       document.addEventListener('click', () => closeAllMenus());
 
       document.addEventListener('click', (e) => {
@@ -360,6 +421,10 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           currentSortBy = btn.dataset.value;
           closeAllMenus();
           applyFilter();
+        } else if (action === 'setStatus') {
+          currentStatus = btn.dataset.value ?? '';
+          closeAllMenus();
+          applyFilter();
         }
       });
     `;
@@ -367,46 +432,85 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     const extraStyles = `
       <style>
         body { padding: 8px; }
+        .filter-search-row {
+          width: 100%;
+        }
+        .filter-search-row #queryFilter {
+          width: 100%;
+        }
+        .filter-controls {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
         .filter-bar {
           margin-bottom: 8px;
           display: flex;
           flex-direction: column;
           gap: 6px;
         }
-        .filter-bar #queryFilter {
-          width: 100%;
+        .icon-btn-wrap {
+          position: relative;
+          display: inline-flex;
         }
-        .filter-row {
-          display: flex;
-          gap: 4px;
-        }
-        .filter-select-wrap {
-          flex: 1;
-          min-width: 0;
-          display: flex;
+        .icon-btn {
+          display: inline-flex;
           align-items: center;
-          gap: 3px;
-          background: var(--vscode-input-background);
-          border: 1px solid var(--vscode-input-border, var(--card-border));
-          border-radius: 3px;
-          padding-left: 5px;
-        }
-        .filter-select-wrap:focus-within {
-          outline: 1px solid var(--accent);
-        }
-        .filter-icon {
-          flex-shrink: 0;
-          color: var(--muted-fg);
-        }
-        .filter-select-wrap select {
-          flex: 1;
-          min-width: 0;
-          border: none;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          padding: 0;
           background: transparent;
-          padding-left: 2px;
+          border: none;
+          border-radius: 3px;
+          color: var(--muted-fg);
+          cursor: pointer;
         }
-        .filter-select-wrap select:focus {
-          outline: none;
+        .icon-btn:hover {
+          background: var(--card-hover);
+          color: var(--header-fg);
+        }
+        .icon-btn-active {
+          color: var(--accent);
+        }
+        .popup-menu {
+          display: none;
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          background: var(--vscode-dropdown-background);
+          color: var(--vscode-foreground);
+          border: 1px solid var(--vscode-input-border, var(--card-border));
+          border-radius: 4px;
+          min-width: 160px;
+          padding: 4px 0;
+          z-index: 1000;
+          font-family: inherit;
+          font-size: inherit;
+          box-shadow: var(--vscode-widget-shadow, none);
+        }
+        .popup-menu.open {
+          display: block;
+        }
+        .popup-label {
+          padding: 4px 10px;
+          color: var(--muted-fg);
+          font-size: 0.75em;
+          font-family: inherit;
+        }
+        .popup-item {
+          padding: 4px 10px;
+          cursor: pointer;
+          white-space: nowrap;
+          font-family: inherit;
+          font-size: inherit;
+        }
+        .popup-item:hover {
+          background: var(--vscode-list-hoverBackground);
+        }
+        .popup-item.active {
+          font-weight: 600;
+          background: var(--vscode-list-activeSelectionBackground, var(--card-hover));
         }
         .group-section {
           margin-bottom: 8px;
@@ -597,7 +701,6 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         <div class="detail-actions">
           <button class="save-btn" id="saveBtn">Save</button>
           <button class="editor-btn" id="editorBtn">Open in Editor</button>
-          <button class="delete-btn" id="deleteBtn">Delete</button>
         </div>
 
         <div class="detail-id">${this.escapeHtml(task.id)}</div>
@@ -632,12 +735,6 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
       document.getElementById('editorBtn').addEventListener('click', () => {
         vscode.postMessage({ type: 'openInEditor', taskId });
-      });
-
-      document.getElementById('deleteBtn').addEventListener('click', () => {
-        if (confirm('Delete this task?')) {
-          vscode.postMessage({ type: 'deleteTask', taskId });
-        }
       });
     `;
 
@@ -759,21 +856,6 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         }
         .editor-btn:hover {
           background: var(--vscode-button-secondaryHoverBackground);
-        }
-        .delete-btn {
-          background: none;
-          border: 1px solid var(--vscode-inputValidation-errorBorder, #c0392b);
-          color: var(--vscode-inputValidation-errorBorder, #c0392b);
-          padding: 5px 14px;
-          border-radius: 3px;
-          cursor: pointer;
-          font-family: inherit;
-          font-size: 0.85em;
-          margin-left: auto;
-        }
-        .delete-btn:hover {
-          background: var(--vscode-inputValidation-errorBackground, #c0392b);
-          color: var(--vscode-button-foreground, #fff);
         }
         .detail-id {
           font-size: 0.75em;

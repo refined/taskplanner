@@ -47,6 +47,18 @@ export function activate(context: vscode.ExtensionContext) {
     taskListProvider,
   );
 
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (
+        e.affectsConfiguration('taskplanner.sortBy')
+        || e.affectsConfiguration('taskplanner.groupBy')
+      ) {
+        taskListProvider.refresh();
+        KanbanPanel.refreshIfOpen();
+      }
+    }),
+  );
+
   // Commands
   registerInitCommand(context, configManager, fileStore, taskStore);
   registerInitAiCommand(context, configManager);

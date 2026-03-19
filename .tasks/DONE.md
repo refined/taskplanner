@@ -102,5 +102,20 @@ Add Rejected state support, config migration (v1→v2), insert position setting,
 
 Replace main screen with filtered task list (grouped by status, hiding Backlog/Done/Rejected by default). Add Assignee and Updated datetime fields to tasks. Add grouping controls (by status, assignee, date, or none). Add search across all fields. Update README.
 
+Additionally, polished the sidebar sorting and grouping UX:
+- Use standard VS Code fonts for sort/group dropdown/popup controls.
+- Render sort/group as icon buttons that open dropdown menus.
+- Remove the Delete button from the task detail editor.
+- Show a visible save confirmation toast after saving a task.
+- Persist sort (and grouping) in workspace settings and keep sorting consistent between the sidebar tree view and the Kanban board.
+
+---
+
+## TASK-015: Fix Cursor sorting and grouping panels
+**Priority:** P1
+**Updated:** 2026-03-19 00:00
+
+Use VS Code styling for the sorting/grouping popup controls, switch to icon-based dropdown menus, remove the broken Delete action from the sidebar detail panel, add a clear save confirmation, and keep sorting synchronized across the sidebar tree view and the Kanban board.
+
 ---
 

@@ -39,6 +39,7 @@ export class KanbanPanel {
       }
     });
 
+    this.syncSortFromSettings();
     this.update();
   }
 
@@ -48,6 +49,24 @@ export class KanbanPanel {
       return;
     }
     KanbanPanel.instance = new KanbanPanel(taskStore, configManager);
+  }
+
+  public static refreshIfOpen(): void {
+    if (!KanbanPanel.instance) return;
+    KanbanPanel.instance.syncSortFromSettings();
+    if (KanbanPanel.instance.panel.visible) {
+      KanbanPanel.instance.update();
+    }
+  }
+
+  private getSortByFromSettings(): 'priority' | 'name' | 'id' {
+    const value = vscode.workspace.getConfiguration('taskplanner').get<string>('sortBy', 'priority');
+    if (value === 'priority' || value === 'name' || value === 'id') return value;
+    return 'priority';
+  }
+
+  private syncSortFromSettings(): void {
+    this.sortBy = this.getSortByFromSettings();
   }
 
   private handleMessage(msg: { type: string; [key: string]: unknown }): void {
@@ -79,8 +98,18 @@ export class KanbanPanel {
         vscode.commands.executeCommand('taskplanner.createTaskInState', msg.stateName as string);
         break;
       case 'sortBy':
-        this.sortBy = msg.sortBy as 'priority' | 'name' | 'id';
-        this.update();
+        {
+          const nextSortBy = msg.sortBy as 'priority' | 'name' | 'id';
+          if (nextSortBy !== this.sortBy) {
+            this.sortBy = nextSortBy;
+            void vscode.workspace.getConfiguration('taskplanner').update(
+              'sortBy',
+              nextSortBy,
+              vscode.ConfigurationTarget.Workspace,
+            );
+          }
+          this.update();
+        }
         break;
     }
   }
@@ -136,19 +165,26 @@ export class KanbanPanel {
       columns += this.buildCompletedColumn(doneState, rejectedState);
     }
 
-    const sortOptions = [
+    const sortByItems = [
       { value: 'priority', label: 'Priority' },
       { value: 'name', label: 'Name' },
       { value: 'id', label: 'ID' },
     ]
-      .map((o) => `<option value="${o.value}"${this.sortBy === o.value ? ' selected' : ''}>${o.label}</option>`)
+      .map((o) => `<div class="popup-item${this.sortBy === o.value ? ' active' : ''}" data-action="setSortBy" data-value="${o.value}">${o.label}</div>`)
       .join('\n');
 
     const body = `
       <h1>Kanban Board</h1>
       <div class="kanban-toolbar">
-        <label>Sort by</label>
-        <select id="sortByFilter">${sortOptions}</select>
+        <div class="icon-btn-wrap">
+          <button class="icon-btn${this.sortBy !== 'priority' ? ' icon-btn-active' : ''}" id="sortByBtn" title="Sort by: ${this.sortBy}">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1l3 4H4v6h2l-3 4-3-4h2V5H0l3-4zm6 1h7v2H9V2zm0 4h5v2H9V6zm0 4h3v2H9v-2z"/></svg>
+          </button>
+          <div class="popup-menu" id="sortByMenu">
+            <div class="popup-label">Sort by</div>
+            ${sortByItems}
+          </div>
+        </div>
       </div>
       <div class="kanban-board">${columns}</div>
     `;
@@ -199,10 +235,22 @@ export class KanbanPanel {
         draggedTaskId = null;
       });
 
-      // Sort control
-      document.getElementById('sortByFilter').addEventListener('change', (e) => {
-        vscode.postMessage({ type: 'sortBy', sortBy: e.target.value });
+      // Popup sort control
+      const sortByBtn = document.getElementById('sortByBtn');
+      const sortByMenu = document.getElementById('sortByMenu');
+
+      function closeAllMenus() {
+        document.querySelectorAll('.popup-menu.open').forEach(m => m.classList.remove('open'));
+      }
+
+      sortByBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = sortByMenu.classList.contains('open');
+        closeAllMenus();
+        if (!isOpen) sortByMenu.classList.add('open');
       });
+
+      document.addEventListener('click', () => closeAllMenus());
 
       // Button actions
       document.addEventListener('click', (e) => {
@@ -221,6 +269,8 @@ export class KanbanPanel {
           vscode.postMessage({ type: 'showCompleted' });
         } else if (action === 'addTask') {
           vscode.postMessage({ type: 'addTask', stateName: btn.dataset.stateName });
+        } else if (action === 'setSortBy') {
+          vscode.postMessage({ type: 'sortBy', sortBy: btn.dataset.value });
         }
       });
     `;
@@ -233,10 +283,68 @@ export class KanbanPanel {
           gap: 8px;
           margin-bottom: 12px;
         }
-        .kanban-toolbar label {
-          font-size: 0.85em;
+        .icon-btn-wrap {
+          position: relative;
+          display: inline-flex;
+        }
+        .icon-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          padding: 0;
+          background: transparent;
+          border: none;
+          border-radius: 3px;
           color: var(--muted-fg);
-          font-weight: 500;
+          cursor: pointer;
+        }
+        .icon-btn:hover {
+          background: var(--card-hover);
+          color: var(--header-fg);
+        }
+        .icon-btn-active {
+          color: var(--accent);
+        }
+        .popup-menu {
+          display: none;
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          background: var(--vscode-dropdown-background);
+          color: var(--vscode-foreground);
+          border: 1px solid var(--vscode-input-border, var(--card-border));
+          border-radius: 4px;
+          min-width: 160px;
+          padding: 4px 0;
+          z-index: 1000;
+          font-family: inherit;
+          font-size: inherit;
+          box-shadow: var(--vscode-widget-shadow, none);
+        }
+        .popup-menu.open {
+          display: block;
+        }
+        .popup-label {
+          padding: 4px 10px;
+          color: var(--muted-fg);
+          font-size: 0.75em;
+          font-family: inherit;
+        }
+        .popup-item {
+          padding: 4px 10px;
+          cursor: pointer;
+          white-space: nowrap;
+          font-family: inherit;
+          font-size: inherit;
+        }
+        .popup-item:hover {
+          background: var(--vscode-list-hoverBackground);
+        }
+        .popup-item.active {
+          font-weight: 600;
+          background: var(--vscode-list-activeSelectionBackground, var(--card-hover));
         }
         .kanban-board {
           display: flex;

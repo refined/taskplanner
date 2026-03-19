@@ -1,7 +1,7 @@
 {
   "name": "taskplanner",
   "displayName": "Task Planner AI",
-  "description": "Markdown-based task tracking that lives in your project folder. AI-friendly, git-tracked.",
+  "description": "AI-directed markdown task management in your repo. Generates CLAUDE.md and .cursorrules so agents can follow your workflow contract. Tracked by git.",
   "version": "1.0.4",
   "publisher": "refined",
   "license": "GPL v3",
@@ -153,6 +153,18 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically create/update AI instruction files on init"
+        },
+        "taskplanner.sortBy": {
+          "type": "string",
+          "default": "priority",
+          "enum": ["priority", "name", "id"],
+          "description": "Sort order for tasks: `priority`, `name`, or `id`"
+        },
+        "taskplanner.groupBy": {
+          "type": "string",
+          "default": "status",
+          "enum": ["status", "assignee", "date", "none"],
+          "description": "Group tasks in the sidebar task list by: `status`, `assignee`, `date`, or `none`"
         }
       }
     }
@@ -165,7 +177,7 @@
     "test:watch": "vitest",
     "test:extension": "vscode-test",
     "lint": "eslint src --ext ts",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"esbuild.js\"",
     "package": "vsce package"
   },
   "devDependencies": {

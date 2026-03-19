@@ -1,0 +1,13 @@
+---
+description: TaskPlanner task markdown format reminder
+globs: **/.tasks/**/*.md
+alwaysApply: false
+---
+
+# TaskPlanner task markdown
+
+- Each task is a `## TASK-###: Title` heading section.
+- Keep tasks separated by `---`.
+- Priority is required in task headers (`**Priority:** P0` … `P4`).
+- Optional metadata commonly used: `**Tags:**`, `**Assignee:**`, `**Updated:**`.
+

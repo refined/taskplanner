@@ -1,10 +1,11 @@
 # Task Planner AI
 
-Markdown-based task tracking built for AI-assisted development. Tasks live in your repo as `.md` files — readable by humans, parseable by AI agents, tracked by git.
+AI-directed markdown task tracking built for AI-assisted development. Tasks live in your repo as `.md` files — readable by humans, parseable by AI agents, and pregenerated CLAUDE.md and .cursorrules workflows, tracked by git.
 
 ## Why?
 
 - **AI-native workflow** — agents read `NEXT.md`, pick a task, plan, build, and move it to `DONE.md`
+- **Agent-ready workflow artifacts** — initialize generates CLAUDE.md and .cursorrules so different AI tools follow the same task state machine
 - **Tasks next to code** — no context switching to Jira/Linear/Asana
 - **Git-tracked** — full history of every task change in your commits
 - **Human-readable** — plain markdown, works without the extension installed
@@ -25,6 +26,21 @@ Markdown-based task tracking built for AI-assisted development. Tasks live in yo
 - **AI planning mode** — agents write a `### Plan` inside the task before coding
 - **Live file watcher** — edit `.tasks/*.md` by hand and all views update instantly
 - **Configurable** — custom states, priorities (P0–P4), tags, ID prefix, sort order
+
+## Why TaskPlanner Is Better Than Other Solutions
+
+Competitors often focus on UI and manual task editing. TaskPlanner is built for AI execution: it keeps tasks as plain markdown artifacts next to your code, and it generates agent instruction files (CLAUDE.md and .cursorrules) that teach your tools how to pick work, create a plan, and move tasks through your workflow.
+
+- Agent workflow contract (generated CLAUDE.md and .cursorrules)
+- Git-tracked audit trail for every move and edit
+- Optional planning gate to reduce implementation churn
+- Works as plain markdown even without the extension
+
+## Works With
+
+- **VS Code** — primary target
+- **Cursor IDE** — fully compatible
+- **JetBrains IDEs** — planned
 
 ## Quick Start
 
@@ -194,12 +210,6 @@ Project config (`.tasks/config.json`):
 | `priorities` | Available priority levels |
 | `insertPosition` | Where new tasks are added: `top` or `bottom` |
 | `aiPlanRequired` | Whether AI agents must write a `### Plan` before coding |
-
-## Works With
-
-- **VS Code** — primary target
-- **Cursor IDE** — fully compatible (published to Open VSX)
-- **JetBrains IDEs** — planned
 
 ## License
 
