@@ -223,34 +223,52 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       return `<option value="${s.name}"${selected}>${s.name}</option>`;
     });
 
-    const groupByOptions = [
+    const groupByItems = [
       { value: 'status', label: 'Status' },
       { value: 'assignee', label: 'Assignee' },
       { value: 'date', label: 'Date' },
       { value: 'none', label: 'No grouping' },
     ]
-      .map((o) => `<option value="${o.value}"${groupBy === o.value ? ' selected' : ''}>${o.label}</option>`)
+      .map((o) => `<div class="popup-item${groupBy === o.value ? ' active' : ''}" data-action="setGroupBy" data-value="${o.value}">${o.label}</div>`)
       .join('\n');
 
-    const sortOptions = [
+    const sortByItems = [
       { value: 'priority', label: 'Priority' },
       { value: 'name', label: 'Name' },
       { value: 'id', label: 'ID' },
     ]
-      .map((o) => `<option value="${o.value}"${this.sortBy === o.value ? ' selected' : ''}>${o.label}</option>`)
+      .map((o) => `<div class="popup-item${this.sortBy === o.value ? ' active' : ''}" data-action="setSortBy" data-value="${o.value}">${o.label}</div>`)
       .join('\n');
 
     const filterBar = `
       <div class="filter-bar">
-        <input type="text" id="queryFilter" placeholder="Search..."
-          value="${this.escapeAttr(this.filter.query ?? '')}" />
-        <div class="filter-row">
-          <select id="groupByFilter">${groupByOptions}</select>
+        <div class="filter-top">
+          <input type="text" id="queryFilter" placeholder="Search..."
+            value="${this.escapeAttr(this.filter.query ?? '')}" />
           <select id="statusFilter">
-            <option value=""${!this.filter.status ? ' selected' : ''}>All</option>
+            <option value=""${!this.filter.status ? ' selected' : ''}>All statuses</option>
             ${stateOptions.join('\n')}
           </select>
-          <select id="sortByFilter" title="Sort by">${sortOptions}</select>
+        </div>
+        <div class="filter-icons">
+          <div class="icon-btn-wrap">
+            <button class="icon-btn${groupBy !== 'status' ? ' icon-btn-active' : ''}" id="groupByBtn" title="Group by: ${this.escapeAttr(groupBy)}">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14v1H1zm0 4h10v1H1zm0 4h14v1H1zm0-2h10v1H1z"/></svg>
+            </button>
+            <div class="popup-menu" id="groupByMenu">
+              <div class="popup-label">Group by</div>
+              ${groupByItems}
+            </div>
+          </div>
+          <div class="icon-btn-wrap">
+            <button class="icon-btn${this.sortBy !== 'priority' ? ' icon-btn-active' : ''}" id="sortByBtn" title="Sort by: ${this.escapeAttr(this.sortBy)}">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1l3 4H4v6h2l-3 4-3-4h2V5H0l3-4zm6 1h7v2H9V2zm0 4h5v2H9V6zm0 4h3v2H9v-2z"/></svg>
+            </button>
+            <div class="popup-menu" id="sortByMenu">
+              <div class="popup-label">Sort by</div>
+              ${sortByItems}
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -267,8 +285,13 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     const script = `
       const statusEl = document.getElementById('statusFilter');
       const queryEl = document.getElementById('queryFilter');
-      const groupByEl = document.getElementById('groupByFilter');
-      const sortByEl = document.getElementById('sortByFilter');
+      const groupByBtn = document.getElementById('groupByBtn');
+      const groupByMenu = document.getElementById('groupByMenu');
+      const sortByBtn = document.getElementById('sortByBtn');
+      const sortByMenu = document.getElementById('sortByMenu');
+
+      let currentGroupBy = ${JSON.stringify(groupBy)};
+      let currentSortBy = ${JSON.stringify(this.sortBy)};
 
       let debounceTimer;
       function applyFilter() {
@@ -279,17 +302,15 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
             filter: {
               status: statusEl.value || undefined,
               query: queryEl.value || undefined,
-              groupBy: groupByEl.value || 'status'
+              groupBy: currentGroupBy
             },
-            sortBy: sortByEl.value
+            sortBy: currentSortBy
           });
         }, 200);
       }
 
       statusEl.addEventListener('change', applyFilter);
       queryEl.addEventListener('input', applyFilter);
-      groupByEl.addEventListener('change', applyFilter);
-      sortByEl.addEventListener('change', applyFilter);
 
       // Restore focus to search when re-rendered with an active query
       if (queryEl.value) {
@@ -298,6 +319,27 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           queryEl.setSelectionRange(queryEl.value.length, queryEl.value.length);
         });
       }
+
+      // Popup menu toggle
+      function closeAllMenus() {
+        document.querySelectorAll('.popup-menu.open').forEach(m => m.classList.remove('open'));
+      }
+
+      groupByBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = groupByMenu.classList.contains('open');
+        closeAllMenus();
+        if (!isOpen) groupByMenu.classList.add('open');
+      });
+
+      sortByBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = sortByMenu.classList.contains('open');
+        closeAllMenus();
+        if (!isOpen) sortByMenu.classList.add('open');
+      });
+
+      document.addEventListener('click', () => closeAllMenus());
 
       document.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-action]');
@@ -310,6 +352,14 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           vscode.postMessage({ type: 'showAll', groupLabel: btn.dataset.groupLabel });
         } else if (action === 'toggleGroup') {
           vscode.postMessage({ type: 'toggleGroup', groupLabel: btn.dataset.groupLabel });
+        } else if (action === 'setGroupBy') {
+          currentGroupBy = btn.dataset.value;
+          closeAllMenus();
+          applyFilter();
+        } else if (action === 'setSortBy') {
+          currentSortBy = btn.dataset.value;
+          closeAllMenus();
+          applyFilter();
         }
       });
     `;
@@ -330,9 +380,33 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           display: flex;
           gap: 4px;
         }
-        .filter-row select {
+        .filter-select-wrap {
           flex: 1;
           min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 3px;
+          background: var(--vscode-input-background);
+          border: 1px solid var(--vscode-input-border, var(--card-border));
+          border-radius: 3px;
+          padding-left: 5px;
+        }
+        .filter-select-wrap:focus-within {
+          outline: 1px solid var(--accent);
+        }
+        .filter-icon {
+          flex-shrink: 0;
+          color: var(--muted-fg);
+        }
+        .filter-select-wrap select {
+          flex: 1;
+          min-width: 0;
+          border: none;
+          background: transparent;
+          padding-left: 2px;
+        }
+        .filter-select-wrap select:focus {
+          outline: none;
         }
         .group-section {
           margin-bottom: 8px;
@@ -620,8 +694,8 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         .detail-field textarea {
           resize: vertical;
           min-height: 80px;
-          font-family: var(--vscode-editor-font-family, monospace);
-          font-size: var(--vscode-editor-font-size, 13px);
+          font-family: inherit;
+          font-size: inherit;
           background: var(--vscode-input-background);
           color: var(--vscode-input-foreground);
           border: 1px solid var(--vscode-input-border, var(--card-border));
