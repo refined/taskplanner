@@ -9,6 +9,7 @@ export class KanbanPanel {
   private static instance: KanbanPanel | undefined;
   private panel: vscode.WebviewPanel;
   private showAllForState: Set<string> = new Set();
+  private sortBy: 'priority' | 'name' | 'id' = 'priority';
   private storeDisposable: { dispose: () => void };
 
   private constructor(
@@ -72,10 +73,14 @@ export class KanbanPanel {
         this.taskStore.deleteTask(msg.taskId as string);
         break;
       case 'openTask':
-        vscode.commands.executeCommand('taskplanner.openTask', msg.taskId as string);
+        vscode.commands.executeCommand('taskplanner.viewTask', msg.taskId as string);
         break;
       case 'addTask':
         vscode.commands.executeCommand('taskplanner.createTaskInState', msg.stateName as string);
+        break;
+      case 'sortBy':
+        this.sortBy = msg.sortBy as 'priority' | 'name' | 'id';
+        this.update();
         break;
     }
   }
@@ -83,13 +88,12 @@ export class KanbanPanel {
   private update(): void {
     const config = this.configManager.get();
     const states = config.states;
-    const sortBy = vscode.workspace.getConfiguration('taskplanner').get<'priority' | 'name' | 'id'>('sortBy', 'priority');
     const allTasks = this.taskStore.getAllTasks();
-    const data = filterAndPaginate(allTasks, states, undefined, undefined, sortBy);
+    const data = filterAndPaginate(allTasks, states, undefined, undefined, this.sortBy);
 
     // Apply per-state "show all"
     if (this.showAllForState.size > 0) {
-      const unlimitedData = filterAndPaginate(allTasks, states, undefined, null, sortBy);
+      const unlimitedData = filterAndPaginate(allTasks, states, undefined, null, this.sortBy);
       for (const state of data.states) {
         if (this.showAllForState.has(state.name)) {
           const full = unlimitedData.states.find((s) => s.name === state.name);
@@ -132,8 +136,20 @@ export class KanbanPanel {
       columns += this.buildCompletedColumn(doneState, rejectedState);
     }
 
+    const sortOptions = [
+      { value: 'priority', label: 'Priority' },
+      { value: 'name', label: 'Name' },
+      { value: 'id', label: 'ID' },
+    ]
+      .map((o) => `<option value="${o.value}"${this.sortBy === o.value ? ' selected' : ''}>${o.label}</option>`)
+      .join('\n');
+
     const body = `
       <h1>Kanban Board</h1>
+      <div class="kanban-toolbar">
+        <label>Sort by</label>
+        <select id="sortByFilter">${sortOptions}</select>
+      </div>
       <div class="kanban-board">${columns}</div>
     `;
 
@@ -183,6 +199,11 @@ export class KanbanPanel {
         draggedTaskId = null;
       });
 
+      // Sort control
+      document.getElementById('sortByFilter').addEventListener('change', (e) => {
+        vscode.postMessage({ type: 'sortBy', sortBy: e.target.value });
+      });
+
       // Button actions
       document.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-action]');
@@ -206,6 +227,17 @@ export class KanbanPanel {
 
     const kanbanStyles = `
       <style>
+        .kanban-toolbar {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+        .kanban-toolbar label {
+          font-size: 0.85em;
+          color: var(--muted-fg);
+          font-weight: 500;
+        }
         .kanban-board {
           display: flex;
           gap: 12px;

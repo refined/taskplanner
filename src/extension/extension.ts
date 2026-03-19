@@ -72,6 +72,10 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('taskplanner.openKanban', () => {
       KanbanPanel.createOrShow(taskStore, configManager);
     }),
+    vscode.commands.registerCommand('taskplanner.viewTask', (taskId: string) => {
+      taskListProvider.showTask(taskId);
+      vscode.commands.executeCommand('taskplanner.taskView.focus');
+    }),
   );
 
   // File watcher
