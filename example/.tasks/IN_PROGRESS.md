@@ -22,7 +22,7 @@ Create a WebviewPanel with columns per state. Support HTML5 drag-and-drop to mov
 ---
 
 ## TASK-010: Fix parser crash on empty description
-**Priority:** P2 | **Tag:** bug
+**Priority:** P2 | **Tags:** bug
 
 The parser throws when a task has a heading and metadata but no description text before the separator. Add a guard for empty description.
 

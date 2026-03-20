@@ -8,14 +8,14 @@ Ensure all webview panels respect the user's VS Code color theme. Use CSS variab
 ---
 
 ## TASK-007: Export tasks to CSV
-**Priority:** P4 | **Tag:** feature
+**Priority:** P4 | **Tags:** feature
 
 Allow users to export all tasks (or filtered subset) to a CSV file for reporting purposes.
 
 ---
 
 ## TASK-009: Add due date field to tasks
-**Priority:** P3 | **Tag:** feature
+**Priority:** P3 | **Tags:** feature
 
 Extend the task model with an optional `**Due:**` field. Display it in the tree view and webview panels.
 

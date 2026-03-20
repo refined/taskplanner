@@ -1,5 +1,13 @@
 # Done
 
+## TASK-027: Save button should close form and return to list
+**Priority:** P1 | **Tags:** ui, feature
+**Updated:** 2026-03-20
+
+After clicking the Save button on the task edit form, the form should close and navigate back to the task list view.
+
+---
+
 ## TASK-001: Project scaffolding and initial setup
 **Priority:** P1 | **Tags:** core, setup | **Assignee:** Fedor
 **Updated:** 2026-03-16 00:00

@@ -8,7 +8,7 @@ Extend the filtered task list to support filtering by tag. Add a tag dropdown or
 ---
 
 ## TASK-004: Set up project structure and esbuild
-**Priority:** P1 | **Tag:** refactor
+**Priority:** P1 | **Tags:** refactor
 
 Initial project scaffolding with TypeScript strict mode, esbuild bundler, Vitest for unit tests, and ESLint + Prettier configuration.
 

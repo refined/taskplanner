@@ -7,8 +7,7 @@ export function serializeTask(task: Task): string {
 
   const metaParts: string[] = [`**Priority:** ${task.priority}`];
   if (task.tags.length > 0) {
-    const label = task.tags.length === 1 ? 'Tag' : 'Tags';
-    metaParts.push(`**${label}:** ${task.tags.join(', ')}`);
+    metaParts.push(`**Tags:** ${task.tags.join(', ')}`);
   }
   if (task.epic) {
     metaParts.push(`**Epic:** ${task.epic}`);

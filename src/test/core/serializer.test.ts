@@ -17,7 +17,7 @@ describe('serializeTask', () => {
     );
   });
 
-  it('uses Tag (singular) for one tag', () => {
+  it('uses Tags for one tag', () => {
     const task: Task = {
       id: 'TASK-002',
       title: 'Fix bug',
@@ -26,7 +26,7 @@ describe('serializeTask', () => {
       description: 'Fix the login bug.',
     };
     const result = serializeTask(task);
-    expect(result).toContain('**Tag:** bugfix');
+    expect(result).toContain('**Tags:** bugfix');
   });
 
   it('includes epic on the same line', () => {
@@ -39,7 +39,7 @@ describe('serializeTask', () => {
       description: 'Configure CI.',
     };
     const result = serializeTask(task);
-    expect(result).toContain('**Priority:** P2 | **Tag:** devops | **Epic:** infrastructure');
+    expect(result).toContain('**Priority:** P2 | **Tags:** devops | **Epic:** infrastructure');
   });
 
   it('handles empty tags', () => {

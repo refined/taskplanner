@@ -161,6 +161,8 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           const updatedTask = this.taskStore.updateTask(taskId, updates);
           if (updatedTask) {
             vscode.window.showInformationMessage('Task saved.');
+            this.activeTaskId = null;
+            this.update();
           }
         }
         break;

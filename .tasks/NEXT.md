@@ -8,14 +8,6 @@ Automatically bump the patch version (last number) in package.json as a pre-comm
 
 ---
 
-## TASK-023: CI/CD pipeline for extension delivery
-**Priority:** P2 | **Tags:** setup
-**Updated:** 2026-03-20 00:00
-
-Automate publishing the extension to VS Code Marketplace and Cursor. Explore JetBrains Marketplace for the future plugin. Set up auto-merge for PRs into master after checks pass.
-
----
-
 ## TASK-022: Split README into dev docs and user-facing page
 **Priority:** P3 | **Tags:** docs
 **Updated:** 2026-03-20 00:00

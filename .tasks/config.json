@@ -1,7 +1,7 @@
 {
   "version": 2,
   "idPrefix": "TASK",
-  "nextId": 27,
+  "nextId": 28,
   "states": [
     { "name": "Backlog", "fileName": "BACKLOG.md", "order": 0 },
     { "name": "Next", "fileName": "NEXT.md", "order": 1 },
