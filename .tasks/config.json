@@ -1,7 +1,7 @@
 {
   "version": 2,
   "idPrefix": "TASK",
-  "nextId": 15,
+  "nextId": 27,
   "states": [
     { "name": "Backlog", "fileName": "BACKLOG.md", "order": 0 },
     { "name": "Next", "fileName": "NEXT.md", "order": 1 },
@@ -10,7 +10,7 @@
     { "name": "Rejected", "fileName": "REJECTED.md", "order": 4 }
   ],
   "priorities": ["P0", "P1", "P2", "P3", "P4"],
-  "tags": ["core", "ui", "feature", "docs", "setup", "refactor", "testing"],
+  "tags": ["core", "ui", "feature", "docs", "setup", "refactor", "testing", "ci"],
   "insertPosition": "top",
   "aiPlanRequired": true,
   "sortBy": "priority"
