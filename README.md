@@ -23,7 +23,7 @@ AI-directed markdown task tracking built for AI-assisted development. Tasks live
 - **Drag-and-drop** — move tasks between states in tree view and Kanban board
 - **Assignee & timestamps** — track who owns each task and when it was last updated
 - **AI instruction generation** — auto-generates `CLAUDE.md` and `.cursorrules` that teach agents your task workflow
-- **AI planning mode** — agents write a `### Plan` inside the task before coding
+- **AI planning mode** — agents write a `### Plan` inside the task before coding; the plan is preserved when moving to Done
 - **Live file watcher** — edit `.tasks/*.md` by hand and all views update instantly
 - **Configurable** — custom states, priorities (P0–P4), tags, ID prefix, sort order
 
@@ -135,6 +135,8 @@ Replace SQLite with PostgreSQL for production readiness.
 ---
 ```
 
+When a task is moved to Done, the `### Plan` section is kept as a condensed summary of what was implemented — preserving implementation history for future reference.
+
 Toggle via the Setup menu or set `aiPlanRequired` in `.tasks/config.json`.
 
 ### Auto-init
@@ -155,7 +157,7 @@ The primary view opens automatically when you click the TaskPlanner sidebar icon
 
 ### Kanban Board
 
-Open via command palette → `TaskPlanner: Open Kanban Board`. Columns map to task states. Drag cards between columns to change state. Task cards show assignee and last update time.
+Open via command palette → `TaskPlanner: Open Kanban Board`. Three columns: **Backlog**, **Active** (Next + In Progress), and **Completed** (Done + Rejected). Drag cards between columns or sub-zones to change state. Task cards show assignee and last update time.
 
 ### Sidebar Tree
 
@@ -180,6 +182,7 @@ Extension settings (accessible via VS Code Settings UI):
 | `taskplanner.taskDirectory` | `.tasks` | Directory for task files relative to workspace root |
 | `taskplanner.autoInitAiFiles` | `true` | Auto-create/update AI instruction files on init |
 | `taskplanner.sortBy` | `priority` | Sort order for tasks: `priority`, `name`, or `id` |
+| `taskplanner.groupBy` | `status` | Group tasks by: `status`, `assignee`, `date`, or `none` |
 
 Project config (`.tasks/config.json`):
 
