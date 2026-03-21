@@ -36,15 +36,15 @@ Competitors often focus on UI and manual task editing. TaskPlanner is built for 
 - Optional planning gate to reduce implementation churn
 - Works as plain markdown even without the extension
 
-## Works With
+## Install
 
-- **VS Code** — primary target
-- **Cursor IDE** — fully compatible
+- [**VS Code Marketplace**](https://marketplace.visualstudio.com/items?itemName=refined.taskplanner) — VS Code
+- [**Open VSX**](https://open-vsx.org/extension/refined/taskplanner) — Cursor IDE and other compatible editors
 - **JetBrains IDEs** — planned
 
 ## Quick Start
 
-1. Install the extension from the VS Code Marketplace
+1. Install the extension from the marketplace links above
 2. Open a project folder
 3. Click the TaskPlanner icon in the activity bar — a welcome view with **Initialize Project** appears
 4. Run **Initialize AI Instructions** to generate workflow files for your AI tools
@@ -184,35 +184,11 @@ Extension settings (accessible via VS Code Settings UI):
 | `taskplanner.sortBy` | `priority` | Sort order for tasks: `priority`, `name`, or `id` |
 | `taskplanner.groupBy` | `status` | Group tasks by: `status`, `assignee`, `date`, or `none` |
 
-Project config (`.tasks/config.json`):
+Project config is stored in `.tasks/config.json`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full config reference.
 
-```json
-{
-  "version": 2,
-  "idPrefix": "TASK",
-  "nextId": 1,
-  "states": [
-    { "name": "Backlog", "fileName": "BACKLOG.md", "order": 0 },
-    { "name": "Next", "fileName": "NEXT.md", "order": 1 },
-    { "name": "In Progress", "fileName": "IN_PROGRESS.md", "order": 2 },
-    { "name": "Done", "fileName": "DONE.md", "order": 3 },
-    { "name": "Rejected", "fileName": "REJECTED.md", "order": 4 }
-  ],
-  "priorities": ["P0", "P1", "P2", "P3", "P4"],
-  "tags": [],
-  "insertPosition": "top",
-  "aiPlanRequired": true,
-  "sortBy": "priority"
-}
-```
+## Contributing
 
-| Field | Description |
-|-------|-------------|
-| `idPrefix` | Prefix for task IDs (e.g. `TASK` → `TASK-001`) |
-| `states` | Task board columns with file mappings |
-| `priorities` | Available priority levels |
-| `insertPosition` | Where new tasks are added: `top` or `bottom` |
-| `aiPlanRequired` | Whether AI agents must write a `### Plan` before coding |
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, project structure, architecture decisions, and PR guidelines.
 
 ## License
 
