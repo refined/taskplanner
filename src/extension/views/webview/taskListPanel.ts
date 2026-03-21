@@ -712,7 +712,30 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     const script = `
       const taskId = ${JSON.stringify(task.id)};
 
+      const initial = {
+        title: document.getElementById('fieldTitle').value,
+        priority: document.getElementById('fieldPriority').value,
+        assignee: document.getElementById('fieldAssignee').value,
+        epic: document.getElementById('fieldEpic').value,
+        tags: document.getElementById('fieldTags').value,
+        description: document.getElementById('fieldDescription').value
+      };
+
+      function hasUnsavedChanges() {
+        return (
+          document.getElementById('fieldTitle').value !== initial.title ||
+          document.getElementById('fieldPriority').value !== initial.priority ||
+          document.getElementById('fieldAssignee').value !== initial.assignee ||
+          document.getElementById('fieldEpic').value !== initial.epic ||
+          document.getElementById('fieldTags').value !== initial.tags ||
+          document.getElementById('fieldDescription').value !== initial.description
+        );
+      }
+
       document.getElementById('backBtn').addEventListener('click', () => {
+        if (hasUnsavedChanges() && !confirm('You have unsaved changes. Discard them?')) {
+          return;
+        }
         vscode.postMessage({ type: 'backToList' });
       });
 
