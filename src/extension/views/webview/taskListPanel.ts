@@ -159,7 +159,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           if (msg.assignee !== undefined) updates.assignee = (msg.assignee as string) || undefined;
           if (msg.epic !== undefined) updates.epic = (msg.epic as string) || undefined;
           const updatedTask = this.taskStore.updateTask(taskId, updates);
-          if (updatedTask) {
+          if (updatedTask && msg.navigateBack) {
             vscode.window.showInformationMessage('Task saved.');
             this.activeTaskId = null;
             this.update();
@@ -711,51 +711,54 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
     const script = `
       const taskId = ${JSON.stringify(task.id)};
+      let debounceTimer = null;
 
-      const initial = {
-        title: document.getElementById('fieldTitle').value,
-        priority: document.getElementById('fieldPriority').value,
-        assignee: document.getElementById('fieldAssignee').value,
-        epic: document.getElementById('fieldEpic').value,
-        tags: document.getElementById('fieldTags').value,
-        description: document.getElementById('fieldDescription').value
-      };
-
-      function hasUnsavedChanges() {
-        return (
-          document.getElementById('fieldTitle').value !== initial.title ||
-          document.getElementById('fieldPriority').value !== initial.priority ||
-          document.getElementById('fieldAssignee').value !== initial.assignee ||
-          document.getElementById('fieldEpic').value !== initial.epic ||
-          document.getElementById('fieldTags').value !== initial.tags ||
-          document.getElementById('fieldDescription').value !== initial.description
-        );
-      }
-
-      document.getElementById('backBtn').addEventListener('click', () => {
-        if (hasUnsavedChanges() && !confirm('You have unsaved changes. Discard them?')) {
-          return;
-        }
-        vscode.postMessage({ type: 'backToList' });
-      });
-
-      document.getElementById('fieldStatus').addEventListener('change', (e) => {
-        vscode.postMessage({ type: 'changeStatus', taskId, targetState: e.target.value });
-      });
-
-      document.getElementById('saveBtn').addEventListener('click', () => {
+      function collectFields() {
         const tagsRaw = document.getElementById('fieldTags').value;
-        const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
-        vscode.postMessage({
+        return {
           type: 'saveTask',
           taskId,
           title: document.getElementById('fieldTitle').value,
           priority: document.getElementById('fieldPriority').value,
           assignee: document.getElementById('fieldAssignee').value,
           epic: document.getElementById('fieldEpic').value,
-          tags,
+          tags: tagsRaw.split(',').map(t => t.trim()).filter(Boolean),
           description: document.getElementById('fieldDescription').value
-        });
+        };
+      }
+
+      function saveNow(navigateBack) {
+        clearTimeout(debounceTimer);
+        const msg = collectFields();
+        if (navigateBack) msg.navigateBack = true;
+        vscode.postMessage(msg);
+      }
+
+      function debouncedSave() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => vscode.postMessage(collectFields()), 800);
+      }
+
+      // Auto-save: debounced for text inputs, immediate for dropdowns
+      ['fieldTitle', 'fieldTags', 'fieldAssignee', 'fieldEpic', 'fieldDescription'].forEach(id => {
+        document.getElementById(id).addEventListener('input', debouncedSave);
+      });
+
+      document.getElementById('fieldPriority').addEventListener('change', () => saveNow(false));
+
+      document.getElementById('fieldStatus').addEventListener('change', (e) => {
+        vscode.postMessage({ type: 'changeStatus', taskId, targetState: e.target.value });
+      });
+
+      // Back always works — fields are auto-saved
+      document.getElementById('backBtn').addEventListener('click', () => {
+        saveNow(false);
+        vscode.postMessage({ type: 'backToList' });
+      });
+
+      // Explicit save: save immediately + navigate back
+      document.getElementById('saveBtn').addEventListener('click', () => {
+        saveNow(true);
       });
 
       document.getElementById('editorBtn').addEventListener('click', () => {

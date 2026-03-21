@@ -1,5 +1,13 @@
 # Done
 
+## TASK-022: Split README into dev docs and user-facing page
+**Priority:** P3 | **Tag:** docs
+**Updated:** 2026-03-21
+
+Refocused the GitHub README on development process, technical docs, and contribution guide. Created a separate user-facing page with feature highlights, screenshots, and setup guidelines.
+
+---
+
 ## TASK-025: Refactor Kanban board column layout
 **Priority:** P2 | **Tags:** ui, refactor
 **Updated:** 2026-03-21

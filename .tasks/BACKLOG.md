@@ -1,23 +1,15 @@
 # Backlog
 
 ## TASK-023: CI/CD pipeline for extension delivery
-**Priority:** P2 | **Tag:** setup
+**Priority:** P2 | **Tags:** setup
 **Updated:** 2026-03-20 20:56
 
 Automate publishing the extension to VS Code Marketplace and Cursor. Explore JetBrains Marketplace for the future plugin. Set up auto-merge for PRs into master after checks pass.
 
 ---
 
-## TASK-017: Invalid data notification and parser test coverage
-**Priority:** P2 | **Tags:** ui, testing, core
-**Updated:** 2026-03-20 00:00
-
-If a task or text cannot be parsed, display a notification banner at the top of the main screen. Add comprehensive tests for different markdown formats — both valid and malformed inputs.
-
----
-
 ## TASK-019: IntelliJ IDEA extension and Julia format support
-**Priority:** P3 | **Tag:** feature
+**Priority:** P3 | **Tags:** feature
 **Updated:** 2026-03-20 00:00
 
 Build an IntelliJ IDEA plugin that reuses the core library for task parsing/serialization. Integrate support for the Julia task format.
@@ -25,7 +17,7 @@ Build an IntelliJ IDEA plugin that reuses the core library for task parsing/seri
 ---
 
 ## TASK-020: Technical debt cleanup and code simplification
-**Priority:** P2 | **Tag:** refactor
+**Priority:** P2 | **Tags:** refactor
 **Updated:** 2026-03-20 00:00
 
 Audit the codebase for duplicated logic, overly complex methods, and inconsistent base styles. Simplify and unify where possible.
