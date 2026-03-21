@@ -2,7 +2,7 @@
   "name": "taskplanner",
   "displayName": "Task. Plan. AI.",
   "description": "AI-directed markdown task management in your repo. Generates CLAUDE.md and .cursorrules so agents can follow your workflow contract. Tracked by git.",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "publisher": "refined",
   "license": "GPL v3",
   "icon": "resources/icons/taskplanner-color.png",
@@ -161,19 +161,29 @@
         "taskplanner.sortBy": {
           "type": "string",
           "default": "priority",
-          "enum": ["priority", "name", "id"],
+          "enum": [
+            "priority",
+            "name",
+            "id"
+          ],
           "description": "Sort order for tasks: `priority`, `name`, or `id`"
         },
         "taskplanner.groupBy": {
           "type": "string",
           "default": "status",
-          "enum": ["status", "assignee", "date", "none"],
+          "enum": [
+            "status",
+            "assignee",
+            "date",
+            "none"
+          ],
           "description": "Group tasks in the sidebar task list by: `status`, `assignee`, `date`, or `none`"
         }
       }
     }
   },
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "vscode:prepublish": "npm run build",
     "build": "node esbuild.js --production",
     "watch": "node esbuild.js --watch",

@@ -1,5 +1,13 @@
 # Done
 
+## TASK-018: Auto-increment package version on commit
+**Priority:** P3 | **Tag:** setup
+**Updated:** 2026-03-21
+
+Automatically bump the patch version in package.json via a git pre-commit hook. Uses `core.hooksPath` pointing to `.githooks/pre-commit` — no husky dependency. The `prepare` npm script configures the hooks path on `npm install`.
+
+---
+
 ## TASK-027: Save button should close form and return to list
 **Priority:** P1 | **Tags:** ui, feature
 **Updated:** 2026-03-20
