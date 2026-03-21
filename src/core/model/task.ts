@@ -15,6 +15,7 @@ export interface Task {
   epic?: string;
   assignee?: string;
   updatedAt?: string;
+  plan?: string;
 }
 
 export function isPriority(value: string): value is Priority {

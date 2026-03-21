@@ -7,16 +7,20 @@ const EPIC_RE = /^\*\*Epic:\*\*\s*(.+)/;
 const ASSIGNEE_RE = /^\*\*Assignee:\*\*\s*(.+)/;
 const UPDATED_RE = /^\*\*Updated:\*\*\s*(.+)/;
 const SEPARATOR_RE = /^---\s*$/;
+const PLAN_HEADING_RE = /^### Plan\s*$/;
 
 export function parseTasks(content: string): Task[] {
   const lines = content.split('\n');
   const tasks: Task[] = [];
   let current: Partial<Task> | null = null;
   let descriptionLines: string[] = [];
+  let planLines: string[] = [];
   let inMetadata = true;
+  let inPlan = false;
 
   function flushTask() {
     if (current?.id && current?.title) {
+      const plan = planLines.join('\n').trim();
       tasks.push({
         id: current.id,
         title: current.title,
@@ -26,11 +30,14 @@ export function parseTasks(content: string): Task[] {
         epic: current.epic,
         assignee: current.assignee,
         updatedAt: current.updatedAt,
+        ...(plan ? { plan } : {}),
       });
     }
     current = null;
     descriptionLines = [];
+    planLines = [];
     inMetadata = true;
+    inPlan = false;
   }
 
   for (const line of lines) {
@@ -113,6 +120,10 @@ export function parseTasks(content: string): Task[] {
       // Unknown metadata line — treat as start of description
       inMetadata = false;
       descriptionLines.push(line);
+    } else if (PLAN_HEADING_RE.test(line)) {
+      inPlan = true;
+    } else if (inPlan) {
+      planLines.push(line);
     } else {
       descriptionLines.push(line);
     }

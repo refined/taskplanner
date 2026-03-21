@@ -168,6 +168,39 @@ Description without trailing separator.
     expect(tasks[0].description).toBe('Description without trailing separator.');
   });
 
+  it('parses task with plan subsection', () => {
+    const content = `## TASK-001: Feature X
+**Priority:** P1
+
+Description of the task.
+
+### Plan
+
+- Step 1: Do A
+- Step 2: Do B
+
+---
+`;
+    const tasks = parseTasks(content);
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0].description).toBe('Description of the task.');
+    expect(tasks[0].plan).toBe('- Step 1: Do A\n- Step 2: Do B');
+  });
+
+  it('parses task without plan subsection', () => {
+    const content = `## TASK-001: No plan
+**Priority:** P2
+
+Just a description.
+
+---
+`;
+    const tasks = parseTasks(content);
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0].description).toBe('Just a description.');
+    expect(tasks[0].plan).toBeUndefined();
+  });
+
   it('parses multiline description', () => {
     const content = `## TASK-001: Multiline
 **Priority:** P2

@@ -55,6 +55,33 @@ describe('serializeTask', () => {
     expect(result).toContain('**Priority:** P4');
   });
 
+  it('serializes task with plan', () => {
+    const task: Task = {
+      id: 'TASK-010',
+      title: 'With plan',
+      priority: Priority.P1,
+      tags: [],
+      description: 'Some description.',
+      plan: '- Step 1\n- Step 2',
+    };
+    const result = serializeTask(task);
+    expect(result).toBe(
+      `## TASK-010: With plan\n**Priority:** P1\n\nSome description.\n\n### Plan\n\n- Step 1\n- Step 2`,
+    );
+  });
+
+  it('omits plan section when plan is empty', () => {
+    const task: Task = {
+      id: 'TASK-011',
+      title: 'No plan',
+      priority: Priority.P2,
+      tags: [],
+      description: 'Desc.',
+    };
+    const result = serializeTask(task);
+    expect(result).not.toContain('### Plan');
+  });
+
   it('handles empty description', () => {
     const task: Task = {
       id: 'TASK-005',

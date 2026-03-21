@@ -47,11 +47,3 @@ Add created date, updated date, and finished date fields to tasks. Provide a way
 Measure performance of the current parser, serializer, and webview rendering with large task sets. Identify limitations and bottlenecks. Propose architectural updates (pagination, lazy loading, indexing) that would allow the system to handle significantly more tasks.
 
 ---
-
-## TASK-025: Refactor Kanban board column layout
-**Priority:** P2 | **Tags:** ui, refactor
-**Updated:** 2026-03-20 00:00
-
-Restructure the Kanban board columns: first column is Backlog, second column merges Next and In Progress together, third column merges Done and Rejected. This layout better reflects the active workflow and makes the board easier to read at a glance.
-
----

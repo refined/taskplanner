@@ -45,7 +45,11 @@ Description of the task.
 - Key files: ...
 \`\`\`
 
-The plan is free-form markdown. Write it before you start coding.`
+The plan is free-form markdown. Write it before you start coding.
+
+### Plan Persistence
+
+When moving a completed task to DONE.md, **keep the \`### Plan\` section** with a condensed summary of what was done. This preserves the implementation history for future reference.`
     : '';
 
   return `# TaskPlanner — AI Agent Instructions

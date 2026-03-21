@@ -26,6 +26,13 @@ export function serializeTask(task: Task): string {
     lines.push(task.description.trim());
   }
 
+  if (task.plan?.trim()) {
+    lines.push('');
+    lines.push('### Plan');
+    lines.push('');
+    lines.push(task.plan.trim());
+  }
+
   return lines.join('\n');
 }
 

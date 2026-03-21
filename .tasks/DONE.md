@@ -1,5 +1,21 @@
 # Done
 
+## TASK-016: AI plan persistence in task workflow
+**Priority:** P1 | **Tags:** core, feature
+**Updated:** 2026-03-21
+
+When AI moves a task to In Progress, the plan is saved as a `### Plan` subsection. When moved to Done, the plan is preserved for history.
+
+### Plan
+
+- Added `plan?: string` field to Task model
+- Updated parser to detect `### Plan` heading and capture content separately from description
+- Updated serializer to render plan section after description
+- Updated AI instruction template with plan persistence convention
+- Added parser and serializer tests
+
+---
+
 ## TASK-018: Auto-increment package version on commit
 **Priority:** P3 | **Tag:** setup
 **Updated:** 2026-03-21
