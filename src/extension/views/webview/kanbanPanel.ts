@@ -146,17 +146,17 @@ export class KanbanPanel {
     const doneState = stateMap.get('Done');
     const rejectedState = stateMap.get('Rejected');
 
-    // Build columns: Next+Backlog | In Progress | Done/Rejected
+    // Build columns: Backlog | Next+In Progress | Done+Rejected
     // Any other custom states get their own columns
     const knownNames = new Set(['Next', 'Backlog', 'In Progress', 'Done', 'Rejected']);
     const customStates = data.states.filter((s) => !knownNames.has(s.name));
 
     let columns = '';
-    if (nextState || backlogState) {
-      columns += this.buildNextBacklogColumn(nextState, backlogState);
+    if (backlogState) {
+      columns += this.buildStandardColumn(backlogState);
     }
-    if (inProgressState) {
-      columns += this.buildStandardColumn(inProgressState);
+    if (nextState || inProgressState) {
+      columns += this.buildActiveColumn(nextState, inProgressState);
     }
     for (const cs of customStates) {
       columns += this.buildStandardColumn(cs);
@@ -499,60 +499,59 @@ export class KanbanPanel {
     `;
   }
 
-  /** Next column with Backlog sub-section */
-  private buildNextBacklogColumn(nextState?: StateViewData, backlogState?: StateViewData): string {
-    // Next section
+  /** Active column: Next + In Progress merged */
+  private buildActiveColumn(nextState?: StateViewData, inProgressState?: StateViewData): string {
+    const nextCount = nextState?.totalCount ?? 0;
+    const inProgressCount = inProgressState?.totalCount ?? 0;
+    const totalActive = nextCount + inProgressCount;
+
+    // In Progress sub-zone (shown at top)
+    let inProgressHtml = '';
+    if (inProgressState) {
+      const cards = inProgressState.tasks.map((t) => this.buildCard(t)).join('\n');
+      const empty = inProgressState.tasks.length === 0 ? '<div class="empty-state">No tasks</div>' : '';
+      const showMore = inProgressState.hasMore
+        ? `<div class="show-more" data-action="showAll" data-state-name="In Progress">Showing ${inProgressState.tasks.length} of ${inProgressCount} — Show all</div>`
+        : '';
+      inProgressHtml = `
+        <div class="sub-zone" data-state-name="In Progress">
+          <div class="sub-zone-header">
+            <span class="sub-zone-title">In Progress</span>
+            <span class="count-badge">${inProgressCount}</span>
+          </div>
+          ${cards}${empty}${showMore}
+        </div>`;
+    }
+
+    // Next sub-zone
     let nextHtml = '';
     if (nextState) {
       const cards = nextState.tasks.map((t) => this.buildCard(t)).join('\n');
-      const showMore = nextState.hasMore
-        ? `<div class="show-more" data-action="showAll" data-state-name="Next">Showing ${nextState.tasks.length} of ${nextState.totalCount} — Show all</div>`
-        : '';
       const empty = nextState.tasks.length === 0 ? '<div class="empty-state">No tasks</div>' : '';
-      nextHtml = `${cards}${empty}${showMore}`;
-    }
-
-    // Backlog sub-section
-    let backlogHtml = '';
-    if (backlogState) {
-      const backlogExpanded = this.showAllForState.has('Backlog');
-      let backlogContent: string;
-
-      if (backlogExpanded && backlogState.tasks.length > 0) {
-        const backlogCards = backlogState.tasks.map((t) => this.buildCard(t)).join('\n');
-        backlogContent = backlogCards;
-      } else if (backlogState.totalCount > 0) {
-        backlogContent = `
-          <button class="show-collapsed-btn" data-action="showAll" data-state-name="Backlog">
-            Show Backlog (${backlogState.totalCount} tasks)
-          </button>`;
-      } else {
-        backlogContent = '<div class="empty-state">No tasks</div>';
-      }
-
-      backlogHtml = `
-        <div class="sub-zone" data-state-name="Backlog">
+      const showMore = nextState.hasMore
+        ? `<div class="show-more" data-action="showAll" data-state-name="Next">Showing ${nextState.tasks.length} of ${nextCount} — Show all</div>`
+        : '';
+      nextHtml = `
+        <div class="sub-zone" data-state-name="Next">
           <div class="sub-zone-header">
-            <span class="sub-zone-title">Backlog</span>
-            <span class="count-badge">${backlogState.totalCount}</span>
+            <span class="sub-zone-title">Next</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="count-badge">${nextCount}</span>
+              <button class="add-btn" data-action="addTask" data-state-name="Next" title="Add task to Next">+</button>
+            </div>
           </div>
-          ${backlogContent}
+          ${cards}${empty}${showMore}
         </div>`;
     }
 
     return `
       <div class="kanban-column">
-        <div data-state-name="Next">
-          <div class="column-header">
-            <span class="column-title">Next</span>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span class="count-badge">${nextState?.totalCount ?? 0}</span>
-              <button class="add-btn" data-action="addTask" data-state-name="Next" title="Add task to Next">+</button>
-            </div>
-          </div>
-          ${nextHtml}
+        <div class="column-header">
+          <span class="column-title">Active</span>
+          <span class="count-badge">${totalActive}</span>
         </div>
-        ${backlogHtml}
+        ${inProgressHtml}
+        ${nextHtml}
       </div>
     `;
   }

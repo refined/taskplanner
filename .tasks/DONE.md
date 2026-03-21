@@ -1,5 +1,20 @@
 # Done
 
+## TASK-025: Refactor Kanban board column layout
+**Priority:** P2 | **Tags:** ui, refactor
+**Updated:** 2026-03-21
+
+Restructured Kanban board columns from Next+Backlog | In Progress | Done+Rejected to Backlog | Active (Next+In Progress) | Completed (Done+Rejected).
+
+### Plan
+
+- Replaced `buildNextBacklogColumn()` with `buildActiveColumn()` merging Next + In Progress as sub-zones
+- Backlog now renders as a standalone standard column
+- In Progress shown at top of Active column, Next below it
+- Completed column unchanged
+
+---
+
 ## TASK-016: AI plan persistence in task workflow
 **Priority:** P1 | **Tags:** core, feature
 **Updated:** 2026-03-21
