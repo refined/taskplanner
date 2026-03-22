@@ -220,7 +220,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
   private buildWelcomeHtml(): string {
     const body = `
       <div class="welcome">
-        <p>No TaskPlanner project found in this workspace.</p>
+        <p>No Task. Plan. AI. project found in this workspace.</p>
         <button class="welcome-btn" onclick="vscode.postMessage({type:'command',command:'taskplanner.init'})">Initialize Project</button>
         <button class="welcome-btn" onclick="vscode.postMessage({type:'command',command:'taskplanner.setup'})">Setup</button>
       </div>

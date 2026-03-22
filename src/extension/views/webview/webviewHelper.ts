@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as crypto from 'crypto';
+import { randomBytes } from 'crypto';
 
 export function getNonce(): string {
-  return crypto.randomBytes(16).toString('hex');
+  return randomBytes(16).toString('hex');
 }
 
 export function getWebviewHtml(
