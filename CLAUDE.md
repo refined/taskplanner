@@ -55,6 +55,10 @@ Branch names must follow the pattern: `<type>/TASK-NNN-short-description`
 
 Examples: `feature/TASK-028-kanban-search`, `bug/TASK-012-fix-parser-edge-case`.
 
+## Changelog
+
+When you move a task to **Done**, add an entry to `CHANGELOG.md` under the `## [Unreleased]` section. Use the appropriate subsection (`Added`, `Changed`, `Fixed`, `Removed`) and reference the task ID. Keep entries concise — one line per change, written from the user's perspective.
+
 ## Architecture Decisions
 
 - **Core is VS Code-free** so it can be reused for JetBrains plugin or CLI later.

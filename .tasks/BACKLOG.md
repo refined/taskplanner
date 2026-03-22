@@ -1,8 +1,8 @@
 # Backlog
 
 ## TASK-023: CI/CD pipeline for extension delivery
-**Priority:** P2 | **Tags:** setup
-**Updated:** 2026-03-20 20:56
+**Priority:** P4 | **Tags:** setup
+**Updated:** 2026-03-22 19:15
 
 Automate publishing the extension to VS Code Marketplace and Cursor. Explore JetBrains Marketplace for the future plugin. Set up auto-merge for PRs into master after checks pass.
 

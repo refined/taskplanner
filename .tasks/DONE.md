@@ -1,5 +1,20 @@
 # Done
 
+## TASK-029: Changelog for extension marketplace
+**Priority:** P1 | **Tags:** docs, setup
+**Updated:** 2026-03-22
+
+The VS Code marketplace page shows an empty Changelog tab. Create and maintain a `CHANGELOG.md` at the project root following the [Keep a Changelog](https://keepachangelog.com) format. The changelog should be auto-updated whenever a task is moved to Done — the AI agent completing the task appends an entry under the current `[Unreleased]` section.
+
+### Plan
+
+- Created `CHANGELOG.md` at project root with retrospective entries from all completed tasks, grouped into versions 1.0.0, 1.1.0, 1.2.0
+- Added `[Unreleased]` section at top for ongoing entries
+- Added changelog update rule to `CLAUDE.md` so AI agents append entries when moving tasks to Done
+- Follows [Keep a Changelog](https://keepachangelog.com) format
+
+---
+
 ## TASK-028: search on Kanban board
 **Priority:** P3 | **Tags:** UI, search | **Assignee:** Fedor
 **Updated:** 2026-03-22 14:09
