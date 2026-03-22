@@ -158,12 +158,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           if (msg.tags !== undefined) updates.tags = msg.tags as string[];
           if (msg.assignee !== undefined) updates.assignee = (msg.assignee as string) || undefined;
           if (msg.epic !== undefined) updates.epic = (msg.epic as string) || undefined;
-          const updatedTask = this.taskStore.updateTask(taskId, updates);
-          if (updatedTask && msg.navigateBack) {
-            vscode.window.showInformationMessage('Task saved.');
-            this.activeTaskId = null;
-            this.update();
-          }
+          this.taskStore.updateTask(taskId, updates);
         }
         break;
       case 'openInEditor':
@@ -701,7 +696,6 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         ${task.updatedAt ? `<div class="detail-meta">Updated: ${this.escapeHtml(task.updatedAt)}</div>` : ''}
 
         <div class="detail-actions">
-          <button class="save-btn" id="saveBtn">Save</button>
           <button class="editor-btn" id="editorBtn">Open in Editor</button>
         </div>
 
@@ -757,13 +751,11 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         lastSaved.description = document.getElementById('fieldDescription').value;
       }
 
-      function saveNow(navigateBack) {
+      function saveNow() {
         clearTimeout(debounceTimer);
-        if (!isDirty() && !navigateBack) return;
-        const msg = collectFields();
-        if (navigateBack) msg.navigateBack = true;
+        if (!isDirty()) return;
         markClean();
-        vscode.postMessage(msg);
+        vscode.postMessage(collectFields());
       }
 
       function debouncedSave() {
@@ -780,7 +772,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         document.getElementById(id).addEventListener('input', debouncedSave);
       });
 
-      document.getElementById('fieldPriority').addEventListener('change', () => saveNow(false));
+      document.getElementById('fieldPriority').addEventListener('change', () => saveNow());
 
       document.getElementById('fieldStatus').addEventListener('change', (e) => {
         vscode.postMessage({ type: 'changeStatus', taskId, targetState: e.target.value });
@@ -788,14 +780,11 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
       // Back always works — fields are auto-saved
       document.getElementById('backBtn').addEventListener('click', () => {
-        saveNow(false);
+        saveNow();
         vscode.postMessage({ type: 'backToList' });
       });
 
-      // Explicit save: save immediately + navigate back
-      document.getElementById('saveBtn').addEventListener('click', () => {
-        saveNow(true);
-      });
+
 
       document.getElementById('editorBtn').addEventListener('click', () => {
         vscode.postMessage({ type: 'openInEditor', taskId });
@@ -894,19 +883,6 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           flex-wrap: wrap;
           padding-top: 4px;
           border-top: 1px solid var(--card-border);
-        }
-        .save-btn {
-          background: var(--vscode-button-background);
-          color: var(--vscode-button-foreground);
-          border: none;
-          padding: 5px 14px;
-          border-radius: 3px;
-          cursor: pointer;
-          font-family: inherit;
-          font-size: 0.85em;
-        }
-        .save-btn:hover {
-          background: var(--vscode-button-hoverBackground);
         }
         .editor-btn {
           background: var(--vscode-button-secondaryBackground);
