@@ -1,5 +1,22 @@
 # Done
 
+## TASK-028: search on Kanban board
+**Priority:** P3 | **Tags:** UI, search | **Assignee:** Fedor
+**Updated:** 2026-03-22 14:09
+
+I want to have same search abilities as on a List Board. Search field only, we already have sorting, and other "query" functionalities is not applicable to Kanban Board.
+
+### Plan
+
+- Added search input to kanban toolbar with 200ms debounced filtering
+- Reused existing `filterAndPaginate` + `matchesQuery` from core
+- Removed delete button from kanban (not needed for now)
+- Reduced column gap from 12px to 6px
+- Added branch naming convention (`feature/TASK-NNN-desc`, `bug/TASK-NNN-desc`) to project CLAUDE.md and generated AI instructions
+- Key files: `kanbanPanel.ts`, `aiInstructions.ts`, `CLAUDE.md`
+
+---
+
 ## TASK-022: Split README into dev docs and user-facing page
 **Priority:** P3 | **Tag:** docs
 **Updated:** 2026-03-21

@@ -144,6 +144,11 @@ export class TaskStore {
       return null;
     }
 
+    // Skip write/notify if no fields actually changed
+    if (!TaskStore.hasChanges(found.task, updates)) {
+      return found.task;
+    }
+
     const updatedTask: Task = { ...found.task, ...updates, id: taskId, updatedAt: TaskStore.now() };
     const tasks = this.getTasksByState(found.stateName).map((t) =>
       t.id === taskId ? updatedTask : t,
@@ -152,6 +157,21 @@ export class TaskStore {
     this.fileStore.writeState(state, tasks);
     this.notifyListeners();
     return updatedTask;
+  }
+
+  private static hasChanges(task: Task, updates: Partial<Omit<Task, 'id'>>): boolean {
+    for (const key of Object.keys(updates) as (keyof typeof updates)[]) {
+      const oldVal = task[key];
+      const newVal = updates[key];
+      if (Array.isArray(oldVal) && Array.isArray(newVal)) {
+        if (oldVal.length !== newVal.length || oldVal.some((v, i) => v !== newVal[i])) {
+          return true;
+        }
+      } else if (oldVal !== newVal) {
+        return true;
+      }
+    }
+    return false;
   }
 
   reorderTask(taskId: string, direction: 'up' | 'down'): boolean {

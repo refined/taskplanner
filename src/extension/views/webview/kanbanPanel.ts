@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { TaskStore } from '../../../core/store/taskStore.js';
 import { ConfigManager } from '../../../core/config/configManager.js';
 import { filterAndPaginate } from '../../../core/filter/taskFilter.js';
-import { TaskViewData, StateViewData, TaskViewItem } from '../../../core/model/messages.js';
+import { TaskViewData, StateViewData, TaskViewItem, TaskFilter } from '../../../core/model/messages.js';
 import { getWebviewHtml } from './webviewHelper.js';
 
 export class KanbanPanel {
@@ -10,6 +10,7 @@ export class KanbanPanel {
   private panel: vscode.WebviewPanel;
   private showAllForState: Set<string> = new Set();
   private sortBy: 'priority' | 'name' | 'id' = 'priority';
+  private searchQuery: string = '';
   private storeDisposable: { dispose: () => void };
 
   private constructor(
@@ -88,9 +89,6 @@ export class KanbanPanel {
       case 'moveTask':
         this.taskStore.moveTask(msg.taskId as string, msg.targetState as string);
         break;
-      case 'deleteTask':
-        this.taskStore.deleteTask(msg.taskId as string);
-        break;
       case 'openTask':
         vscode.commands.executeCommand('taskplanner.viewTask', msg.taskId as string);
         break;
@@ -111,6 +109,10 @@ export class KanbanPanel {
           this.update();
         }
         break;
+      case 'search':
+        this.searchQuery = (msg.query as string) ?? '';
+        this.update();
+        break;
     }
   }
 
@@ -118,11 +120,12 @@ export class KanbanPanel {
     const config = this.configManager.get();
     const states = config.states;
     const allTasks = this.taskStore.getAllTasks();
-    const data = filterAndPaginate(allTasks, states, undefined, undefined, this.sortBy);
+    const filter: TaskFilter | undefined = this.searchQuery ? { query: this.searchQuery } : undefined;
+    const data = filterAndPaginate(allTasks, states, filter, undefined, this.sortBy);
 
     // Apply per-state "show all"
     if (this.showAllForState.size > 0) {
-      const unlimitedData = filterAndPaginate(allTasks, states, undefined, null, this.sortBy);
+      const unlimitedData = filterAndPaginate(allTasks, states, filter, null, this.sortBy);
       for (const state of data.states) {
         if (this.showAllForState.has(state.name)) {
           const full = unlimitedData.states.find((s) => s.name === state.name);
@@ -176,6 +179,7 @@ export class KanbanPanel {
     const body = `
       <h1>Kanban Board</h1>
       <div class="kanban-toolbar">
+        <input type="text" id="queryFilter" placeholder="Search..." value="${this.escapeAttr(this.searchQuery)}" />
         <div class="icon-btn-wrap">
           <button class="icon-btn${this.sortBy !== 'priority' ? ' icon-btn-active' : ''}" id="sortByBtn" title="Sort by: ${this.sortBy}">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1l3 4H4v6h2l-3 4-3-4h2V5H0l3-4zm6 1h7v2H9V2zm0 4h5v2H9V6zm0 4h3v2H9v-2z"/></svg>
@@ -190,6 +194,22 @@ export class KanbanPanel {
     `;
 
     const script = `
+      // Search with debounce
+      const queryEl = document.getElementById('queryFilter');
+      let searchTimer;
+      queryEl.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          vscode.postMessage({ type: 'search', query: queryEl.value });
+        }, 200);
+      });
+      if (queryEl.value) {
+        requestAnimationFrame(() => {
+          queryEl.focus();
+          queryEl.setSelectionRange(queryEl.value.length, queryEl.value.length);
+        });
+      }
+
       // Drag and drop — drop targets are elements with [data-state-name]
       let draggedTaskId = null;
 
@@ -259,9 +279,7 @@ export class KanbanPanel {
         const action = btn.dataset.action;
         const taskId = btn.dataset.taskId;
 
-        if (action === 'delete') {
-          vscode.postMessage({ type: 'deleteTask', taskId });
-        } else if (action === 'open') {
+        if (action === 'open') {
           vscode.postMessage({ type: 'openTask', taskId });
         } else if (action === 'showAll') {
           vscode.postMessage({ type: 'showAll', stateName: btn.dataset.stateName });
@@ -282,6 +300,10 @@ export class KanbanPanel {
           align-items: center;
           gap: 8px;
           margin-bottom: 12px;
+        }
+        #queryFilter {
+          flex: 1;
+          min-width: 120px;
         }
         .icon-btn-wrap {
           position: relative;
@@ -348,7 +370,7 @@ export class KanbanPanel {
         }
         .kanban-board {
           display: flex;
-          gap: 12px;
+          gap: 6px;
           overflow-x: auto;
           padding-bottom: 12px;
           min-height: calc(100vh - 80px);
@@ -400,17 +422,6 @@ export class KanbanPanel {
           display: flex;
           align-items: flex-start;
           gap: 6px;
-        }
-        .card-move-row {
-          display: flex;
-          gap: 3px;
-          margin-top: 6px;
-          justify-content: flex-end;
-          opacity: 0;
-          transition: opacity 0.15s;
-        }
-        .kanban-card:hover .card-move-row {
-          opacity: 1;
         }
         .add-btn {
           background: none;
@@ -656,15 +667,16 @@ export class KanbanPanel {
             ${metaHtml}
           </div>
         </div>
-        <div class="card-move-row">
-          <button class="action-btn danger" data-action="delete" data-task-id="${task.id}" style="font-size:0.75em;" title="Delete">&#10005;</button>
-        </div>
       </div>
     `;
   }
 
   private escapeHtml(text: string): string {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  private escapeAttr(text: string): string {
+    return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   }
 
   private dispose(): void {

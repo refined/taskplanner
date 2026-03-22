@@ -13,7 +13,7 @@ AI-directed markdown task tracking built for AI-assisted development. Tasks live
 
 ## Overview
 
-![TaskPlanner overview](resources/screenshots/overview.png)
+![Task. Plan. AI. overview](resources/screenshots/overview.png)
 
 ## Features
 
@@ -27,7 +27,7 @@ AI-directed markdown task tracking built for AI-assisted development. Tasks live
 - **Live file watcher** — edit `.tasks/*.md` by hand and all views update instantly
 - **Configurable** — custom states, priorities (P0–P4), tags, ID prefix, sort order
 
-## Why TaskPlanner Is Better Than Other Solutions
+## Why TaskPlanner (Task.Plan.AI.) Is Better Than Other Solutions
 
 Competitors often focus on UI and manual task editing. TaskPlanner is built for AI execution: it keeps tasks as plain markdown artifacts next to your code, and it generates agent instruction files (CLAUDE.md and .cursorrules) that teach your tools how to pick work, create a plan, and move tasks through your workflow.
 
@@ -46,7 +46,7 @@ Competitors often focus on UI and manual task editing. TaskPlanner is built for 
 
 1. Install the extension from the marketplace links above
 2. Open a project folder
-3. Click the TaskPlanner icon in the activity bar — a welcome view with **Initialize Project** appears
+3. Click the Task. Plan. AI. icon in the activity bar — a welcome view with **Initialize Project** appears
 4. Run **Initialize AI Instructions** to generate workflow files for your AI tools
 5. Start creating tasks!
 

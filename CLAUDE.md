@@ -47,6 +47,14 @@ Description text in markdown.
 ---
 ```
 
+## Git Branching
+
+Branch names must follow the pattern: `<type>/TASK-NNN-short-description`
+- **type** is `feature` or `bug`
+- **TASK-NNN** is the task ID (uppercase, matching the ID prefix from config)
+
+Examples: `feature/TASK-028-kanban-search`, `bug/TASK-012-fix-parser-edge-case`.
+
 ## Architecture Decisions
 
 - **Core is VS Code-free** so it can be reused for JetBrains plugin or CLI later.

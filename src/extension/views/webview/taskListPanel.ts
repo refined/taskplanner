@@ -47,7 +47,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     });
 
     this.storeDisposable = this.taskStore.onDidChange(() => {
-      if (this.view?.visible) {
+      if (this.view?.visible && !this.activeTaskId) {
         this.update();
       }
     });
@@ -220,7 +220,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
   private buildWelcomeHtml(): string {
     const body = `
       <div class="welcome">
-        <p>No TaskPlanner project found in this workspace.</p>
+        <p>No Task. Plan. AI. project found in this workspace.</p>
         <button class="welcome-btn" onclick="vscode.postMessage({type:'command',command:'taskplanner.init'})">Initialize Project</button>
         <button class="welcome-btn" onclick="vscode.postMessage({type:'command',command:'taskplanner.setup'})">Setup</button>
       </div>
@@ -713,6 +713,16 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       const taskId = ${JSON.stringify(task.id)};
       let debounceTimer = null;
 
+      // Track last-saved values to avoid no-op saves
+      let lastSaved = {
+        title: ${JSON.stringify(task.title)},
+        priority: ${JSON.stringify(task.priority)},
+        assignee: ${JSON.stringify(task.assignee ?? '')},
+        epic: ${JSON.stringify(task.epic ?? '')},
+        tags: ${JSON.stringify(task.tags.join(', '))},
+        description: ${JSON.stringify(task.description)}
+      };
+
       function collectFields() {
         const tagsRaw = document.getElementById('fieldTags').value;
         return {
@@ -727,16 +737,42 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         };
       }
 
+      function isDirty() {
+        return (
+          document.getElementById('fieldTitle').value !== lastSaved.title ||
+          document.getElementById('fieldPriority').value !== lastSaved.priority ||
+          document.getElementById('fieldAssignee').value !== lastSaved.assignee ||
+          document.getElementById('fieldEpic').value !== lastSaved.epic ||
+          document.getElementById('fieldTags').value !== lastSaved.tags ||
+          document.getElementById('fieldDescription').value !== lastSaved.description
+        );
+      }
+
+      function markClean() {
+        lastSaved.title = document.getElementById('fieldTitle').value;
+        lastSaved.priority = document.getElementById('fieldPriority').value;
+        lastSaved.assignee = document.getElementById('fieldAssignee').value;
+        lastSaved.epic = document.getElementById('fieldEpic').value;
+        lastSaved.tags = document.getElementById('fieldTags').value;
+        lastSaved.description = document.getElementById('fieldDescription').value;
+      }
+
       function saveNow(navigateBack) {
         clearTimeout(debounceTimer);
+        if (!isDirty() && !navigateBack) return;
         const msg = collectFields();
         if (navigateBack) msg.navigateBack = true;
+        markClean();
         vscode.postMessage(msg);
       }
 
       function debouncedSave() {
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => vscode.postMessage(collectFields()), 800);
+        debounceTimer = setTimeout(() => {
+          if (!isDirty()) return;
+          markClean();
+          vscode.postMessage(collectFields());
+        }, 800);
       }
 
       // Auto-save: debounced for text inputs, immediate for dropdowns

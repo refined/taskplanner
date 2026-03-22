@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as crypto from 'crypto';
+import { randomBytes } from 'crypto';
 
 export function getNonce(): string {
-  return crypto.randomBytes(16).toString('hex');
+  return randomBytes(16).toString('hex');
 }
 
 export function getWebviewHtml(
@@ -155,9 +155,6 @@ export function getWebviewHtml(
       background: var(--vscode-button-secondaryHoverBackground);
     }
 
-    .action-btn.danger:hover {
-      background: var(--vscode-inputValidation-errorBackground, #c0392b);
-    }
 
     select, input[type="text"] {
       background: var(--vscode-input-background);
