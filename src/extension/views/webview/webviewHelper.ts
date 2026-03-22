@@ -155,9 +155,6 @@ export function getWebviewHtml(
       background: var(--vscode-button-secondaryHoverBackground);
     }
 
-    .action-btn.danger:hover {
-      background: var(--vscode-inputValidation-errorBackground, #c0392b);
-    }
 
     select, input[type="text"] {
       background: var(--vscode-input-background);

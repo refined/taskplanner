@@ -2,7 +2,7 @@
   "name": "taskplanner",
   "displayName": "Task. Plan. AI.",
   "description": "AI-directed markdown task management in your repo. Generates CLAUDE.md and .cursorrules so agents can follow your workflow contract. Tracked by git.",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "publisher": "refined",
   "license": "GPL v3",
   "icon": "resources/icons/taskplanner-color.png",
@@ -74,11 +74,6 @@
       {
         "command": "taskplanner.editTask",
         "title": "TaskPlanner: Edit Task"
-      },
-      {
-        "command": "taskplanner.deleteTask",
-        "title": "TaskPlanner: Delete Task",
-        "icon": "$(trash)"
       },
       {
         "command": "taskplanner.openTask",

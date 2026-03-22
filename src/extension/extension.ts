@@ -9,7 +9,6 @@ import { registerInitAiCommand } from './commands/initAi.js';
 import { registerSetupCommand } from './commands/setup.js';
 import { registerCreateTaskCommand } from './commands/createTask.js';
 import { registerMoveTaskCommand } from './commands/moveTask.js';
-import { registerDeleteTaskCommand } from './commands/deleteTask.js';
 import { registerOpenTaskCommand } from './commands/openTask.js';
 import {
   checkAndPromptDuplicateConflicts,
@@ -70,7 +69,6 @@ export function activate(context: vscode.ExtensionContext) {
   registerSetupCommand(context, tasksDir, configManager);
   registerCreateTaskCommand(context, taskStore, configManager);
   registerMoveTaskCommand(context, taskStore, configManager);
-  registerDeleteTaskCommand(context, taskStore);
   registerOpenTaskCommand(context, taskStore, fileStore, configManager);
   registerResolveConflictsCommand(context, taskStore, configManager);
 
