@@ -88,6 +88,17 @@ ${config.aiPlanRequired ? '4' : '3'}. **Implement** the task.
 ${config.aiPlanRequired ? '5' : '4'}. **Move the task** to DONE.md when complete.
 ${planSection}
 
+## Git Branching
+
+When creating a branch for a task, use this naming pattern:
+
+\`<type>/${config.idPrefix}-NNN-short-description\`
+
+- **type** — \`feature\` for new features or \`bug\` for bug fixes
+- **${config.idPrefix}-NNN** — the task ID
+
+Examples: \`feature/${config.idPrefix}-028-kanban-search\`, \`bug/${config.idPrefix}-012-fix-parser-edge-case\`
+
 ## Creating a New Task
 
 When the user asks you to create a task:
