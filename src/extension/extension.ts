@@ -14,6 +14,7 @@ import {
   checkAndPromptDuplicateConflicts,
   registerResolveConflictsCommand,
 } from './commands/resolveConflicts.js';
+import { registerImplementWithAiCommand } from './commands/implementWithAi.js';
 import { createFileWatcher } from './watchers/fileWatcher.js';
 import { TaskListViewProvider } from './views/webview/taskListPanel.js';
 import { KanbanPanel } from './views/webview/kanbanPanel.js';
@@ -71,6 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
   registerMoveTaskCommand(context, taskStore, configManager);
   registerOpenTaskCommand(context, taskStore, fileStore, configManager);
   registerResolveConflictsCommand(context, taskStore, configManager);
+  registerImplementWithAiCommand(context, taskStore, configManager);
 
   // Refresh command
   context.subscriptions.push(

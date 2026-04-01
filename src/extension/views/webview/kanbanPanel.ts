@@ -113,6 +113,9 @@ export class KanbanPanel {
         this.searchQuery = (msg.query as string) ?? '';
         this.update();
         break;
+      case 'implementWithAi':
+        vscode.commands.executeCommand('taskplanner.implementWithAi', msg.taskId as string);
+        break;
     }
   }
 
@@ -289,6 +292,8 @@ export class KanbanPanel {
           vscode.postMessage({ type: 'addTask', stateName: btn.dataset.stateName });
         } else if (action === 'setSortBy') {
           vscode.postMessage({ type: 'sortBy', sortBy: btn.dataset.value });
+        } else if (action === 'implementWithAi') {
+          vscode.postMessage({ type: 'implementWithAi', taskId });
         }
       });
     `;
@@ -404,6 +409,7 @@ export class KanbanPanel {
           font-size: 0.95em;
         }
         .kanban-card {
+          position: relative;
           padding: 8px;
           margin-bottom: 6px;
           background: var(--card-bg);
@@ -414,6 +420,28 @@ export class KanbanPanel {
         }
         .kanban-card:hover {
           background: var(--card-hover);
+        }
+        .card-ai-btn {
+          display: none;
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 2px;
+          line-height: 1;
+          align-items: center;
+          justify-content: center;
+          z-index: 2;
+          opacity: 0.7;
+          transition: opacity 0.15s;
+        }
+        .kanban-card:hover .card-ai-btn {
+          display: inline-flex;
+        }
+        .card-ai-btn:hover {
+          opacity: 1;
         }
         .kanban-card.dragging {
           opacity: 0.4;
@@ -666,6 +694,7 @@ export class KanbanPanel {
             ${tags ? `<div class="task-tags">${tags}</div>` : ''}
             ${metaHtml}
           </div>
+          <button class="card-ai-btn" data-action="implementWithAi" data-task-id="${task.id}" title="Implement with AI"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5Z" fill="#ec4899"/><path d="M12.5 0l.75 2.25L15.5 3l-2.25.75L12.5 6l-.75-2.25L9.5 3l2.25-.75Z" fill="#8b5cf6" opacity="0.8"/></svg></button>
         </div>
       </div>
     `;

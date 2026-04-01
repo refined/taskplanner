@@ -1,5 +1,23 @@
 # Done
 
+## TASK-026: [Claude] Implement with AI button on tasks
+**Priority:** P1 | **Tags:** feature, ui
+**Updated:** 2026-04-01 12:38
+
+Add an "Implement with AI" action button to task cards/detail view. When clicked, it should open the available AI extension (Cursor AI / Copilot), pass the task context, and start planning the implementation. The AI should then follow the existing task pipeline (move to In Progress, plan, implement, move to Done).
+
+### Plan
+
+- Added `composeImplementationPrompt()` in `src/core/ai/promptComposer.ts` — pure function composing task context into an AI prompt
+- Added `taskplanner.implementWithAi` command in `src/extension/commands/implementWithAi.ts` with auto-detection: Cursor Composer, Claude Code URI handler (`vscode://anthropic.claude-code/open?prompt=...`), or clipboard fallback. Sidebar prompt injection pending anthropics/claude-code#42000
+- Added `taskplanner.aiTool` setting (auto/cursor/claude-code/clipboard) to `package.json`
+- Added "Implement with AI" primary button to task detail view in `taskListPanel.ts`
+- Added hover-revealed AI sparkle button to kanban cards in `kanbanPanel.ts`
+- Registered command in `extension.ts`
+- Unit tests for prompt composition (8 tests)
+
+---
+
 ## TASK-029: Changelog for extension marketplace
 **Priority:** P1 | **Tags:** docs, setup
 **Updated:** 2026-03-22
@@ -33,7 +51,7 @@ I want to have same search abilities as on a List Board. Search field only, we a
 ---
 
 ## TASK-022: Split README into dev docs and user-facing page
-**Priority:** P3 | **Tag:** docs
+**Priority:** P3 | **Tags:** docs
 **Updated:** 2026-03-21
 
 Refocused the GitHub README on development process, technical docs, and contribution guide. Created a separate user-facing page with feature highlights, screenshots, and setup guidelines.
@@ -72,7 +90,7 @@ When AI moves a task to In Progress, the plan is saved as a `### Plan` subsectio
 ---
 
 ## TASK-018: Auto-increment package version on commit
-**Priority:** P3 | **Tag:** setup
+**Priority:** P3 | **Tags:** setup
 **Updated:** 2026-03-21
 
 Automatically bump the patch version in package.json via a git pre-commit hook. Uses `core.hooksPath` pointing to `.githooks/pre-commit` — no husky dependency. The `prepare` npm script configures the hooks path on `npm install`.
@@ -215,4 +233,3 @@ In this case I propose to notify user. We can give user select - or make an auto
 Please update after resolution the minor version of a package
 
 ---
-

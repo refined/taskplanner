@@ -2,7 +2,7 @@
   "name": "taskplanner",
   "displayName": "Task. Plan. AI.",
   "description": "AI-directed markdown task management in your repo. Generates CLAUDE.md and .cursorrules so agents can follow your workflow contract. Tracked by git.",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "publisher": "refined",
   "license": "GPL v3",
   "icon": "resources/icons/taskplanner-color.png",
@@ -114,6 +114,11 @@
       {
         "command": "taskplanner.resolveConflicts",
         "title": "TaskPlanner: Resolve Duplicate Task IDs"
+      },
+      {
+        "command": "taskplanner.implementWithAi",
+        "title": "TaskPlanner: Implement Task with AI",
+        "icon": "$(sparkle)"
       }
     ],
     "menus": {
@@ -173,6 +178,23 @@
             "none"
           ],
           "description": "Group tasks in the sidebar task list by: `status`, `assignee`, `date`, or `none`"
+        },
+        "taskplanner.aiTool": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "cursor",
+            "claude-code",
+            "clipboard"
+          ],
+          "enumDescriptions": [
+            "Auto-detect: Cursor Composer if in Cursor IDE, otherwise Claude Code terminal",
+            "Cursor Composer",
+            "Claude Code (opens Claude Code panel with prompt)",
+            "Copy prompt to clipboard"
+          ],
+          "description": "AI tool to use for the 'Implement with AI' action"
         }
       }
     }

@@ -7,7 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- "Implement with AI" button on task detail view and kanban cards — auto-detects Cursor or Claude Code, with clipboard fallback (TASK-026)
+- `taskplanner.aiTool` setting to choose preferred AI tool (auto/cursor/claude-code/clipboard) (TASK-026)
 - Changelog for VS Code marketplace with retrospective entries and auto-update rule in CLAUDE.md (TASK-029)
+
+### Changed
+
+- Claude Code integration simplified to URI handler — removed intermediate QuickPick menu (TASK-026)
 
 ## [1.2.0] - 2026-03-22
 

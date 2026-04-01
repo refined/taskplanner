@@ -11,6 +11,8 @@ AI-directed markdown task tracking built for AI-assisted development. Tasks live
 - **Human-readable** — plain markdown, works without the extension installed
 - **Zero config** — run "Initialize Project" and start creating tasks
 
+> **Help shape AI workflows** — if you use Claude Code, upvote [anthropics/claude-code#42000](https://github.com/anthropics/claude-code/issues/42000) to enable direct prompt-to-sidebar integration.
+
 ## Overview
 
 ![Task. Plan. AI. overview](resources/screenshots/overview.png)

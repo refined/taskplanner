@@ -1,0 +1,54 @@
+import { Task } from '../model/task.js';
+import { TaskPlannerConfig } from '../model/config.js';
+
+export function composeImplementationPrompt(
+  task: Task,
+  stateName: string,
+  config: TaskPlannerConfig,
+): string {
+  const meta: string[] = [];
+  meta.push(`Priority: ${task.priority}`);
+  if (task.tags.length > 0) meta.push(`Tags: ${task.tags.join(', ')}`);
+  if (task.assignee) meta.push(`Assignee: ${task.assignee}`);
+  meta.push(`Status: ${stateName}`);
+
+  const slugTitle = task.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 40);
+
+  const lines: string[] = [
+    `Implement task ${task.id}: ${task.title}`,
+    '',
+    meta.join(' | '),
+    '',
+  ];
+
+  if (task.description.trim()) {
+    lines.push('Description:', task.description.trim(), '');
+  }
+
+  if (task.plan?.trim()) {
+    lines.push('Existing plan:', task.plan.trim(), '');
+  }
+
+  lines.push(
+    'Workflow:',
+    `1. Create a git branch: feature/${task.id}-${slugTitle}`,
+    `2. Move the task from ${stateName} to In Progress (cut from source .tasks/ file, paste into IN_PROGRESS.md)`,
+  );
+
+  if (config.aiPlanRequired) {
+    lines.push('3. Write a ### Plan subsection under the task heading before coding');
+    lines.push('4. Implement the task');
+    lines.push('5. Move the task to DONE.md when complete');
+  } else {
+    lines.push('3. Implement the task');
+    lines.push('4. Move the task to DONE.md when complete');
+  }
+
+  lines.push('', 'Refer to .tasks/config.json and CLAUDE.md for project conventions.');
+
+  return lines.join('\n');
+}

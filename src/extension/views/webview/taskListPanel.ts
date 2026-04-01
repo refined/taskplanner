@@ -164,6 +164,9 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       case 'openInEditor':
         vscode.commands.executeCommand('taskplanner.openTask', msg.taskId as string);
         break;
+      case 'implementWithAi':
+        vscode.commands.executeCommand('taskplanner.implementWithAi', msg.taskId as string);
+        break;
       case 'command':
         vscode.commands.executeCommand(msg.command as string);
         break;
@@ -422,6 +425,9 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           currentStatus = btn.dataset.value ?? '';
           closeAllMenus();
           applyFilter();
+        } else if (action === 'implementWithAi') {
+          e.stopPropagation();
+          vscode.postMessage({ type: 'implementWithAi', taskId: btn.dataset.taskId });
         }
       });
     `;
@@ -543,10 +549,33 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           display: none;
         }
         .task-card {
+          position: relative;
           padding: 6px 8px;
           margin-bottom: 4px;
           gap: 6px;
           cursor: pointer;
+        }
+        .card-ai-btn {
+          display: none;
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 2px;
+          line-height: 1;
+          align-items: center;
+          justify-content: center;
+          z-index: 2;
+          opacity: 0.7;
+          transition: opacity 0.15s;
+        }
+        .task-card:hover .card-ai-btn {
+          display: inline-flex;
+        }
+        .card-ai-btn:hover {
+          opacity: 1;
         }
         .task-content {
           min-width: 0;
@@ -634,6 +663,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           ${tags ? `<div class="task-tags">${tags}</div>` : ''}
           ${metaHtml}
         </div>
+        <button class="card-ai-btn" data-action="implementWithAi" data-task-id="${task.id}" title="Implement with AI"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5Z" fill="#ec4899"/><path d="M12.5 0l.75 2.25L15.5 3l-2.25.75L12.5 6l-.75-2.25L9.5 3l2.25-.75Z" fill="#8b5cf6" opacity="0.8"/></svg></button>
       </div>
     `;
   }
@@ -696,6 +726,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         ${task.updatedAt ? `<div class="detail-meta">Updated: ${this.escapeHtml(task.updatedAt)}</div>` : ''}
 
         <div class="detail-actions">
+          <button class="ai-btn" id="aiBtn"><svg width="14" height="14" viewBox="0 0 16 16" style="vertical-align:-2px;margin-right:4px"><path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5Z" fill="#fff"/><path d="M12.5 0l.75 2.25L15.5 3l-2.25.75L12.5 6l-.75-2.25L9.5 3l2.25-.75Z" fill="#fff" opacity="0.7"/></svg>Implement with AI</button>
           <button class="editor-btn" id="editorBtn">Open in Editor</button>
         </div>
 
@@ -788,6 +819,10 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
       document.getElementById('editorBtn').addEventListener('click', () => {
         vscode.postMessage({ type: 'openInEditor', taskId });
+      });
+
+      document.getElementById('aiBtn').addEventListener('click', () => {
+        vscode.postMessage({ type: 'implementWithAi', taskId });
       });
     `;
 
@@ -883,6 +918,21 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           flex-wrap: wrap;
           padding-top: 4px;
           border-top: 1px solid var(--card-border);
+        }
+        .ai-btn {
+          background: linear-gradient(135deg, #ec4899, #8b5cf6);
+          color: #ffffff;
+          border: none;
+          padding: 5px 14px;
+          border-radius: 3px;
+          cursor: pointer;
+          font-family: inherit;
+          font-size: 0.85em;
+          display: inline-flex;
+          align-items: center;
+        }
+        .ai-btn:hover {
+          background: linear-gradient(135deg, #db2777, #7c3aed);
         }
         .editor-btn {
           background: var(--vscode-button-secondaryBackground);
