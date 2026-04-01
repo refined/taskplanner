@@ -1,6 +1,12 @@
 import { Task } from '../model/task.js';
 import { TaskState } from '../model/state.js';
-import { TaskFilter, TaskViewData, TaskViewItem, StateViewData, GroupViewData } from '../model/messages.js';
+import {
+  TaskFilter,
+  TaskViewData,
+  TaskViewItem,
+  StateViewData,
+  GroupViewData,
+} from '../model/messages.js';
 
 const DEFAULT_LIMIT = 50;
 
@@ -29,7 +35,12 @@ function matchesQuery(task: Task, query: string): boolean {
 
 const PRIORITY_ORDER: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3, P4: 4 };
 
-export function sortTasks(tasks: Task[], sortBy: 'priority' | 'name' | 'id'): Task[] {
+export type TaskListSortBy = 'priority' | 'name' | 'id' | 'file';
+
+export function sortTasks(tasks: Task[], sortBy: TaskListSortBy): Task[] {
+  if (sortBy === 'file') {
+    return [...tasks];
+  }
   const sorted = [...tasks];
   sorted.sort((a, b) => {
     switch (sortBy) {
@@ -41,6 +52,8 @@ export function sortTasks(tasks: Task[], sortBy: 'priority' | 'name' | 'id'): Ta
         return a.title.localeCompare(b.title);
       case 'id':
         return a.id.localeCompare(b.id);
+      default:
+        return 0;
     }
   });
   return sorted;
@@ -51,7 +64,7 @@ export function filterAndPaginate(
   states: TaskState[],
   filter?: TaskFilter,
   limit: number | null = DEFAULT_LIMIT,
-  sortBy: 'priority' | 'name' | 'id' = 'priority',
+  sortBy: TaskListSortBy = 'priority',
 ): TaskViewData {
   const result: StateViewData[] = [];
 
@@ -95,7 +108,7 @@ export function groupTasks(
   groupBy: 'status' | 'assignee' | 'date' | 'none',
   filter?: TaskFilter,
   limit: number | null = DEFAULT_LIMIT,
-  sortBy: 'priority' | 'name' | 'id' = 'priority',
+  sortBy: TaskListSortBy = 'priority',
 ): GroupViewData[] {
   // Collect all tasks with their state name
   let allTasks: { task: Task; stateName: string }[] = [];
@@ -149,7 +162,10 @@ export function groupTasks(
         continue;
       }
       const entries = groups.get(state.name) ?? [];
-      const sorted = sortTasks(entries.map((e) => e.task), sortBy);
+      const sorted = sortTasks(
+        entries.map((e) => e.task),
+        sortBy,
+      );
       const totalCount = sorted.length;
       const hasMore = limit !== null && totalCount > limit;
       const sliced = limit !== null ? sorted.slice(0, limit) : sorted;
@@ -166,7 +182,10 @@ export function groupTasks(
     const keys = [...groups.keys()].sort();
     for (const key of keys) {
       const entries = groups.get(key)!;
-      const sorted = sortTasks(entries.map((e) => e.task), sortBy);
+      const sorted = sortTasks(
+        entries.map((e) => e.task),
+        sortBy,
+      );
       const totalCount = sorted.length;
       const hasMore = limit !== null && totalCount > limit;
       const sliced = limit !== null ? sorted.slice(0, limit) : sorted;

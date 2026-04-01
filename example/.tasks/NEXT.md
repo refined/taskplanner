@@ -1,9 +1,9 @@
 # Next
 
-## TASK-012: Bulk move tasks between states
-**Priority:** P3 | **Tags:** ui, feature
-**Updated:** 2026-03-19 17:38
+## TASK-001: Build filtered task list webview
+**Priority:** P1 | **Tags:** ui, feature
+**Updated:** 2026-04-01 20:26
 
-Allow selecting multiple tasks in the list view and moving them to a target state in one action.
+Create a WebviewPanel that displays all tasks in a flat list with filter controls: status dropdown, text search (matches ID and title). Cap at 50 tasks with "Show all" button.
 
 ---

@@ -50,7 +50,8 @@ export function registerSetupCommand(
 
       items.push({
         label: '$(hubot) Configure AI Provider',
-        description: "Choose Cursor, Claude Code, VS Code Chat, CLI, or clipboard for 'Implement with AI'",
+        description:
+          "Choose Cursor, Claude Code, VS Code Chat, CLI, or clipboard for 'Implement with AI'",
         action: 'configureAi',
       });
 
@@ -58,8 +59,11 @@ export function registerSetupCommand(
         priority: 'Priority',
         name: 'Name',
         id: 'ID',
+        file: 'File order',
       };
-      const currentSort = vscode.workspace.getConfiguration('taskplanner').get<string>('sortBy', 'priority');
+      const currentSort = vscode.workspace
+        .getConfiguration('taskplanner')
+        .get<string>('sortBy', 'priority');
       items.push({
         label: `$(list-ordered) Sort By: ${sortLabels[currentSort]}`,
         description: 'Change task sort order',
@@ -97,24 +101,36 @@ export function registerSetupCommand(
           break;
         case 'sortBy': {
           const sortOptions = [
-            { label: 'Priority', description: 'Sort by priority (P1 first), then by name', value: 'priority' as const },
-            { label: 'Name', description: 'Sort alphabetically by task title', value: 'name' as const },
+            {
+              label: 'Priority',
+              description: 'Sort by priority (P1 first), then by name',
+              value: 'priority' as const,
+            },
+            {
+              label: 'Name',
+              description: 'Sort alphabetically by task title',
+              value: 'name' as const,
+            },
             { label: 'ID', description: 'Sort by task ID', value: 'id' as const },
+            {
+              label: 'File order',
+              description: 'Order as in markdown (for drag-reorder in the task list)',
+              value: 'file' as const,
+            },
           ];
           const sortPicked = await vscode.window.showQuickPick(sortOptions, {
             placeHolder: 'Select sort order',
           });
           if (sortPicked) {
-            await vscode.workspace.getConfiguration('taskplanner').update('sortBy', sortPicked.value, vscode.ConfigurationTarget.Workspace);
+            await vscode.workspace
+              .getConfiguration('taskplanner')
+              .update('sortBy', sortPicked.value, vscode.ConfigurationTarget.Workspace);
             vscode.window.showInformationMessage(`Sort order set to: ${sortPicked.label}`);
           }
           break;
         }
         case 'settings':
-          await vscode.commands.executeCommand(
-            'workbench.action.openSettings',
-            'taskplanner',
-          );
+          await vscode.commands.executeCommand('workbench.action.openSettings', 'taskplanner');
           break;
       }
     }),

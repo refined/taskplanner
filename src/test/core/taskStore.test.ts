@@ -132,4 +132,72 @@ describe('TaskStore', () => {
     taskStore.moveTask('TASK-001', 'Next');
     expect(changeCount).toBe(2);
   });
+
+  it('reorders a task to a specific index', () => {
+    taskStore.createTask(
+      { title: 'A', priority: Priority.P1, tags: [], description: '' },
+      'Backlog',
+    );
+    taskStore.createTask(
+      { title: 'B', priority: Priority.P2, tags: [], description: '' },
+      'Backlog',
+    );
+    taskStore.createTask(
+      { title: 'C', priority: Priority.P3, tags: [], description: '' },
+      'Backlog',
+    );
+
+    expect(taskStore.reorderTaskToIndex('TASK-003', 2)).toBe(true);
+    let order = taskStore.getTasksByState('Backlog').map((t) => t.id);
+    expect(order).toEqual(['TASK-002', 'TASK-001', 'TASK-003']);
+
+    expect(taskStore.reorderTaskToIndex('TASK-003', 0)).toBe(true);
+    order = taskStore.getTasksByState('Backlog').map((t) => t.id);
+    expect(order).toEqual(['TASK-003', 'TASK-002', 'TASK-001']);
+  });
+
+  it('reorderTaskToIndex is a no-op when index unchanged', () => {
+    let changeCount = 0;
+    taskStore.onDidChange(() => changeCount++);
+    taskStore.createTask(
+      { title: 'Only', priority: Priority.P1, tags: [], description: '' },
+      'Backlog',
+    );
+    const before = changeCount;
+    expect(taskStore.reorderTaskToIndex('TASK-001', 0)).toBe(true);
+    expect(changeCount).toBe(before);
+  });
+
+  it('moveTask inserts at targetIndex in target state', () => {
+    taskStore.createTask(
+      { title: 'In next', priority: Priority.P1, tags: [], description: '' },
+      'Next',
+    );
+    taskStore.createTask(
+      { title: 'In backlog', priority: Priority.P2, tags: [], description: '' },
+      'Backlog',
+    );
+
+    const moved = taskStore.moveTask('TASK-002', 'Next', 0);
+    expect(moved).not.toBeNull();
+    const nextOrder = taskStore.getTasksByState('Next').map((t) => t.title);
+    expect(nextOrder).toEqual(['In backlog', 'In next']);
+    expect(taskStore.getTasksByState('Backlog')).toHaveLength(0);
+  });
+
+  it('moveTask with targetIndex reorders within the same state', () => {
+    taskStore.createTask(
+      { title: 'First', priority: Priority.P1, tags: [], description: '' },
+      'Backlog',
+    );
+    taskStore.createTask(
+      { title: 'Second', priority: Priority.P2, tags: [], description: '' },
+      'Backlog',
+    );
+
+    const moved = taskStore.moveTask('TASK-001', 'Backlog', 0);
+    expect(moved).not.toBeNull();
+    const order = taskStore.getTasksByState('Backlog').map((t) => t.id);
+    expect(order).toEqual(['TASK-001', 'TASK-002']);
+  });
 });

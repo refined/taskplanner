@@ -1,5 +1,20 @@
 # Done
 
+## TASK-031: Make tasks draggable in the basic Task list view
+**Priority:** P2 | **Tags:** ui, feature
+**Updated:** 2026-04-01
+
+Allow users to reorder tasks in the basic Task list view by dragging (within a group and/or between groups, consistent with how grouping works). Align drag-and-drop behavior and feedback with the Kanban board where it makes sense.
+
+### Plan
+
+- **Core:** `TaskStore.reorderTaskToIndex`, `moveTask(..., targetIndex?)` for arbitrary positions; Vitest coverage.
+- **List webview:** HTML5 DnD when grouped by **Status** only; `.group-tasks` + **group header** drop zones (collapsed sections); dashed `drag-over`, drop line, `expandGroup` after drop on collapsed header; suppress accidental open after drag.
+- **Sort:** `taskplanner.sortBy` value **file** (markdown order) so reordered lists stay stable; Kanban/setup pickers updated.
+- **Messages:** `reorderTask`, `moveTask.targetIndex`, `expandGroup`.
+
+---
+
 ## TASK-017: Invalid data notification and parser test coverage
 **Priority:** P1 | **Tags:** ui, testing, core
 **Updated:** 2026-04-01

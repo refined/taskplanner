@@ -105,7 +105,7 @@ export class TaskStore {
     return newTask;
   }
 
-  moveTask(taskId: string, targetStateName: string): Task | null {
+  moveTask(taskId: string, targetStateName: string, targetIndex?: number): Task | null {
     const found = this.findTask(taskId);
     if (!found) {
       return null;
@@ -117,6 +117,10 @@ export class TaskStore {
       return null;
     }
 
+    if (targetIndex !== undefined && found.stateName === targetStateName) {
+      return this.reorderTaskToIndex(taskId, targetIndex) ? found.task : null;
+    }
+
     // Remove from source
     const sourceTasks = this.getTasksByState(found.stateName).filter((t) => t.id !== taskId);
     this.tasksByState.set(found.stateName, sourceTasks);
@@ -124,8 +128,11 @@ export class TaskStore {
 
     // Add to target with updated timestamp
     found.task.updatedAt = TaskStore.now();
-    const targetTasks = this.getTasksByState(targetStateName);
-    if (this.config.insertPosition === 'top') {
+    const targetTasks = [...this.getTasksByState(targetStateName)].filter((t) => t.id !== taskId);
+    if (targetIndex !== undefined) {
+      const clamped = Math.max(0, Math.min(targetIndex, targetTasks.length));
+      targetTasks.splice(clamped, 0, found.task);
+    } else if (this.config.insertPosition === 'top') {
       targetTasks.unshift(found.task);
     } else {
       targetTasks.push(found.task);
@@ -194,6 +201,36 @@ export class TaskStore {
       }
     }
     return false;
+  }
+
+  reorderTaskToIndex(taskId: string, newIndex: number): boolean {
+    const found = this.findTask(taskId);
+    if (!found) {
+      return false;
+    }
+
+    const state = this.findState(found.stateName);
+    if (!state) {
+      return false;
+    }
+
+    const tasks = [...this.getTasksByState(found.stateName)];
+    const from = tasks.findIndex((t) => t.id === taskId);
+    if (from === -1) {
+      return false;
+    }
+
+    const to = Math.max(0, Math.min(newIndex, tasks.length - 1));
+    if (from === to) {
+      return true;
+    }
+
+    const [item] = tasks.splice(from, 1);
+    tasks.splice(to, 0, item);
+    this.tasksByState.set(found.stateName, tasks);
+    this.fileStore.writeState(state, tasks);
+    this.notifyListeners();
+    return true;
   }
 
   reorderTask(taskId: string, direction: 'up' | 'down'): boolean {

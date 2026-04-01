@@ -43,8 +43,10 @@ export interface GroupViewData {
 /** Messages from webview to extension host */
 export type WebviewMessage =
   | { type: 'ready' }
-  | { type: 'moveTask'; taskId: string; targetState: string }
+  | { type: 'moveTask'; taskId: string; targetState: string; targetIndex?: number }
+  | { type: 'reorderTask'; taskId: string; newIndex: number }
   | { type: 'deleteTask'; taskId: string }
   | { type: 'openTask'; taskId: string }
   | { type: 'applyFilter'; filter: TaskFilter }
-  | { type: 'showAll'; stateName?: string };
+  | { type: 'showAll'; stateName?: string }
+  | { type: 'expandGroup'; groupLabel: string };

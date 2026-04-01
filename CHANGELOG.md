@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Sidebar task list: drag-and-drop reorder and cross-state moves when grouped by **Status** (Kanban-style feedback); drop on **folded** group headers; optional **File order** sort so order matches markdown (TASK-031)
 - Parse warnings for malformed task markdown: dismissible banner in the task list and Kanban with jump-to-file; reload errors log to the **TaskPlanner** output channel (TASK-017)
 - Cursor Tier 1 chat failure logs to **TaskPlanner AI** output and shows a warning before the Agent Chat paste fallback (TASK-030)
 - Optional `taskplanner.cursorPlanAndSubmitAfterOpen` — after Cursor Tier 1 succeeds, best-effort plan/submit commands (TASK-030)

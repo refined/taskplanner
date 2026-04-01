@@ -9,7 +9,7 @@ export interface TaskPlannerConfig {
   tags: string[];
   insertPosition: 'top' | 'bottom';
   aiPlanRequired: boolean;
-  sortBy: 'priority' | 'name' | 'id';
+  sortBy: 'priority' | 'name' | 'id' | 'file';
 }
 
 export function createDefaultConfig(): TaskPlannerConfig {

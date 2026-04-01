@@ -2,15 +2,20 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { TaskStore } from '../../../core/store/taskStore.js';
 import { ConfigManager } from '../../../core/config/configManager.js';
-import { filterAndPaginate } from '../../../core/filter/taskFilter.js';
-import { TaskViewData, StateViewData, TaskViewItem, TaskFilter } from '../../../core/model/messages.js';
+import { filterAndPaginate, TaskListSortBy } from '../../../core/filter/taskFilter.js';
+import {
+  TaskViewData,
+  StateViewData,
+  TaskViewItem,
+  TaskFilter,
+} from '../../../core/model/messages.js';
 import { getWebviewHtml } from './webviewHelper.js';
 
 export class KanbanPanel {
   private static instance: KanbanPanel | undefined;
   private panel: vscode.WebviewPanel;
   private showAllForState: Set<string> = new Set();
-  private sortBy: 'priority' | 'name' | 'id' = 'priority';
+  private sortBy: TaskListSortBy = 'priority';
   private searchQuery: string = '';
   private storeDisposable: { dispose: () => void };
   private parseWarningsDismissed = false;
@@ -63,9 +68,12 @@ export class KanbanPanel {
     }
   }
 
-  private getSortByFromSettings(): 'priority' | 'name' | 'id' {
-    const value = vscode.workspace.getConfiguration('taskplanner').get<string>('sortBy', 'priority');
-    if (value === 'priority' || value === 'name' || value === 'id') return value;
+  private getSortByFromSettings(): TaskListSortBy {
+    const value = vscode.workspace
+      .getConfiguration('taskplanner')
+      .get<string>('sortBy', 'priority');
+    if (value === 'priority' || value === 'name' || value === 'id' || value === 'file')
+      return value;
     return 'priority';
   }
 
@@ -108,14 +116,12 @@ export class KanbanPanel {
         break;
       case 'sortBy':
         {
-          const nextSortBy = msg.sortBy as 'priority' | 'name' | 'id';
+          const nextSortBy = msg.sortBy as TaskListSortBy;
           if (nextSortBy !== this.sortBy) {
             this.sortBy = nextSortBy;
-            void vscode.workspace.getConfiguration('taskplanner').update(
-              'sortBy',
-              nextSortBy,
-              vscode.ConfigurationTarget.Workspace,
-            );
+            void vscode.workspace
+              .getConfiguration('taskplanner')
+              .update('sortBy', nextSortBy, vscode.ConfigurationTarget.Workspace);
           }
           this.update();
         }
@@ -151,7 +157,9 @@ export class KanbanPanel {
     const config = this.configManager.get();
     const states = config.states;
     const allTasks = this.taskStore.getAllTasks();
-    const filter: TaskFilter | undefined = this.searchQuery ? { query: this.searchQuery } : undefined;
+    const filter: TaskFilter | undefined = this.searchQuery
+      ? { query: this.searchQuery }
+      : undefined;
     const data = filterAndPaginate(allTasks, states, filter, undefined, this.sortBy);
 
     // Apply per-state "show all"
@@ -236,8 +244,12 @@ export class KanbanPanel {
       { value: 'priority', label: 'Priority' },
       { value: 'name', label: 'Name' },
       { value: 'id', label: 'ID' },
+      { value: 'file', label: 'File order' },
     ]
-      .map((o) => `<div class="popup-item${this.sortBy === o.value ? ' active' : ''}" data-action="setSortBy" data-value="${o.value}">${o.label}</div>`)
+      .map(
+        (o) =>
+          `<div class="popup-item${this.sortBy === o.value ? ' active' : ''}" data-action="setSortBy" data-value="${o.value}">${o.label}</div>`,
+      )
       .join('\n');
 
     const body = `
@@ -629,7 +641,12 @@ export class KanbanPanel {
       </style>
     `;
 
-    const html = getWebviewHtml(this.panel.webview, 'Tasks: Kanban Board', kanbanStyles + body, script);
+    const html = getWebviewHtml(
+      this.panel.webview,
+      'Tasks: Kanban Board',
+      kanbanStyles + body,
+      script,
+    );
     return html;
   }
 
@@ -667,7 +684,8 @@ export class KanbanPanel {
     let inProgressHtml = '';
     if (inProgressState) {
       const cards = inProgressState.tasks.map((t) => this.buildCard(t)).join('\n');
-      const empty = inProgressState.tasks.length === 0 ? '<div class="empty-state">No tasks</div>' : '';
+      const empty =
+        inProgressState.tasks.length === 0 ? '<div class="empty-state">No tasks</div>' : '';
       const showMore = inProgressState.hasMore
         ? `<div class="show-more" data-action="showAll" data-state-name="In Progress">Showing ${inProgressState.tasks.length} of ${inProgressCount} — Show all</div>`
         : '';
@@ -742,7 +760,8 @@ export class KanbanPanel {
       let rejectedHtml = '';
       if (rejectedState) {
         const cards = rejectedState.tasks.map((t) => this.buildCard(t)).join('\n');
-        const empty = rejectedState.tasks.length === 0 ? '<div class="empty-state">No tasks</div>' : '';
+        const empty =
+          rejectedState.tasks.length === 0 ? '<div class="empty-state">No tasks</div>' : '';
         rejectedHtml = `
           <div class="sub-zone" data-state-name="Rejected">
             <div class="sub-zone-header">
@@ -756,9 +775,10 @@ export class KanbanPanel {
       innerContent = `${doneHtml}${rejectedHtml}`;
     } else {
       // Collapsed: show drop zones and a button
-      const showButton = totalCompleted > 0
-        ? `<button class="show-collapsed-btn" data-action="showCompleted">Show ${totalCompleted} completed tasks</button>`
-        : '';
+      const showButton =
+        totalCompleted > 0
+          ? `<button class="show-collapsed-btn" data-action="showCompleted">Show ${totalCompleted} completed tasks</button>`
+          : '';
 
       innerContent = `
         <div class="sub-zone" data-state-name="Done">
@@ -792,14 +812,19 @@ export class KanbanPanel {
 
     const metaParts: string[] = [];
     if (task.assignee) {
-      metaParts.push(`<span style="font-size:0.8em;color:var(--muted-fg);">&#128100; ${this.escapeHtml(task.assignee)}</span>`);
+      metaParts.push(
+        `<span style="font-size:0.8em;color:var(--muted-fg);">&#128100; ${this.escapeHtml(task.assignee)}</span>`,
+      );
     }
     if (task.updatedAt) {
-      metaParts.push(`<span style="font-size:0.8em;color:var(--muted-fg);">&#128339; ${this.escapeHtml(task.updatedAt)}</span>`);
+      metaParts.push(
+        `<span style="font-size:0.8em;color:var(--muted-fg);">&#128339; ${this.escapeHtml(task.updatedAt)}</span>`,
+      );
     }
-    const metaHtml = metaParts.length > 0
-      ? `<div style="display:flex;gap:6px;margin-top:3px;flex-wrap:wrap;">${metaParts.join('')}</div>`
-      : '';
+    const metaHtml =
+      metaParts.length > 0
+        ? `<div style="display:flex;gap:6px;margin-top:3px;flex-wrap:wrap;">${metaParts.join('')}</div>`
+        : '';
 
     return `
       <div class="kanban-card" draggable="true" data-task-id="${task.id}">
@@ -820,7 +845,11 @@ export class KanbanPanel {
   }
 
   private escapeHtml(text: string): string {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   private escapeAttr(text: string): string {

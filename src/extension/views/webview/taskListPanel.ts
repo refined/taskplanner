@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { TaskStore } from '../../../core/store/taskStore.js';
 import { ConfigManager } from '../../../core/config/configManager.js';
-import { groupTasks } from '../../../core/filter/taskFilter.js';
+import { groupTasks, TaskListSortBy } from '../../../core/filter/taskFilter.js';
 import { Task, Priority } from '../../../core/model/task.js';
 import { TaskFilter, GroupViewData, TaskViewItem } from '../../../core/model/messages.js';
 import { getWebviewHtml } from './webviewHelper.js';
@@ -12,7 +12,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
   private view?: vscode.WebviewView;
   private filter: TaskFilter = { groupBy: 'status' };
-  private sortBy: 'priority' | 'name' | 'id' = 'priority';
+  private sortBy: TaskListSortBy = 'priority';
   private showAllForGroup: Set<string> = new Set();
   private expandedGroups: Set<string> = new Set();
   private activeTaskId: string | null = null;
@@ -64,15 +64,19 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     this.update();
   }
 
-  private getSortByFromSettings(): 'priority' | 'name' | 'id' {
-    const value = vscode.workspace.getConfiguration('taskplanner').get<string>('sortBy', 'priority');
-    if (value === 'priority' || value === 'name' || value === 'id') return value;
+  private getSortByFromSettings(): TaskListSortBy {
+    const value = vscode.workspace
+      .getConfiguration('taskplanner')
+      .get<string>('sortBy', 'priority');
+    if (value === 'priority' || value === 'name' || value === 'id' || value === 'file')
+      return value;
     return 'priority';
   }
 
   private getGroupByFromSettings(): 'status' | 'assignee' | 'date' | 'none' {
     const value = vscode.workspace.getConfiguration('taskplanner').get<string>('groupBy', 'status');
-    if (value === 'status' || value === 'assignee' || value === 'date' || value === 'none') return value;
+    if (value === 'status' || value === 'assignee' || value === 'date' || value === 'none')
+      return value;
     return 'status';
   }
 
@@ -98,26 +102,22 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
           this.filter = (msg.filter as TaskFilter) ?? { groupBy: 'status' };
           if (msg.sortBy) {
-            this.sortBy = msg.sortBy as 'priority' | 'name' | 'id';
+            this.sortBy = msg.sortBy as TaskListSortBy;
           }
 
           const nextGroupBy = this.filter.groupBy ?? 'status';
           const nextSortBy = this.sortBy;
 
           if (nextGroupBy !== prevGroupBy) {
-            void vscode.workspace.getConfiguration('taskplanner').update(
-              'groupBy',
-              nextGroupBy,
-              vscode.ConfigurationTarget.Workspace,
-            );
+            void vscode.workspace
+              .getConfiguration('taskplanner')
+              .update('groupBy', nextGroupBy, vscode.ConfigurationTarget.Workspace);
           }
 
           if (nextSortBy !== prevSortBy) {
-            void vscode.workspace.getConfiguration('taskplanner').update(
-              'sortBy',
-              nextSortBy,
-              vscode.ConfigurationTarget.Workspace,
-            );
+            void vscode.workspace
+              .getConfiguration('taskplanner')
+              .update('sortBy', nextSortBy, vscode.ConfigurationTarget.Workspace);
           }
         }
         this.showAllForGroup.clear();
@@ -140,6 +140,12 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         }
         this.update();
         break;
+      case 'expandGroup':
+        if (msg.groupLabel) {
+          this.expandedGroups.add(msg.groupLabel as string);
+        }
+        this.update();
+        break;
       case 'viewTask':
         this.activeTaskId = msg.taskId as string;
         this.update();
@@ -151,6 +157,18 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       case 'changeStatus':
         this.taskStore.moveTask(msg.taskId as string, msg.targetState as string);
         break;
+      case 'reorderTask':
+        this.taskStore.reorderTaskToIndex(msg.taskId as string, msg.newIndex as number);
+        break;
+      case 'moveTask': {
+        const ti = msg.targetIndex;
+        this.taskStore.moveTask(
+          msg.taskId as string,
+          msg.targetState as string,
+          typeof ti === 'number' ? ti : undefined,
+        );
+        break;
+      }
       case 'saveTask':
         {
           const taskId = msg.taskId as string;
@@ -326,9 +344,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       ...states.map((s) => ({ value: s.name, label: s.name })),
     ]
       .map((o) => {
-        const isActive = o.value === ''
-          ? !this.filter.status
-          : this.filter.status === o.value;
+        const isActive = o.value === '' ? !this.filter.status : this.filter.status === o.value;
         return `<div class="popup-item${isActive ? ' active' : ''}" data-action="setStatus" data-value="${this.escapeAttr(o.value)}">${o.label}</div>`;
       })
       .join('\n');
@@ -339,15 +355,22 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       { value: 'date', label: 'Date' },
       { value: 'none', label: 'No grouping' },
     ]
-      .map((o) => `<div class="popup-item${groupBy === o.value ? ' active' : ''}" data-action="setGroupBy" data-value="${o.value}">${o.label}</div>`)
+      .map(
+        (o) =>
+          `<div class="popup-item${groupBy === o.value ? ' active' : ''}" data-action="setGroupBy" data-value="${o.value}">${o.label}</div>`,
+      )
       .join('\n');
 
     const sortByItems = [
       { value: 'priority', label: 'Priority' },
       { value: 'name', label: 'Name' },
       { value: 'id', label: 'ID' },
+      { value: 'file', label: 'File order' },
     ]
-      .map((o) => `<div class="popup-item${this.sortBy === o.value ? ' active' : ''}" data-action="setSortBy" data-value="${o.value}">${o.label}</div>`)
+      .map(
+        (o) =>
+          `<div class="popup-item${this.sortBy === o.value ? ' active' : ''}" data-action="setSortBy" data-value="${o.value}">${o.label}</div>`,
+      )
       .join('\n');
 
     const filterBar = `
@@ -388,9 +411,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       </div>
     `;
 
-    const sections = groups
-      .map((g) => this.buildGroupSection(g))
-      .join('\n');
+    const sections = groups.map((g) => this.buildGroupSection(g, groupBy)).join('\n');
 
     const body = `
       ${filterBar}
@@ -410,6 +431,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       let currentGroupBy = ${JSON.stringify(groupBy)};
       let currentSortBy = ${JSON.stringify(this.sortBy)};
       let currentStatus = ${JSON.stringify(this.filter.status ?? '')};
+      let taskListSuppressClickUntil = 0;
 
       let debounceTimer;
       function applyFilter() {
@@ -471,6 +493,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         const action = btn.dataset.action;
 
         if (action === 'viewTask') {
+          if (Date.now() < taskListSuppressClickUntil) return;
           vscode.postMessage({ type: 'viewTask', taskId: btn.dataset.taskId });
         } else if (action === 'showAll') {
           vscode.postMessage({ type: 'showAll', groupLabel: btn.dataset.groupLabel });
@@ -503,6 +526,163 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           vscode.postMessage({ type: 'dismissParseWarnings' });
         }
       });
+      ${
+        groupBy === 'status'
+          ? `
+      (function () {
+        let draggedTaskId = null;
+        let dragSourceState = null;
+
+        function getDropZone(el) {
+          return el && el.closest('[data-state-name]');
+        }
+
+        function isHeaderDropZone(zone) {
+          return zone && zone.classList && zone.classList.contains('group-header-dnd');
+        }
+
+        function cardsInZone(zone, excludeId) {
+          return [...zone.querySelectorAll('.task-card')].filter((c) => c.dataset.taskId !== excludeId);
+        }
+
+        const APPEND_INDEX = 999999;
+
+        function insertIndexFromY(zone, clientY, excludeId) {
+          const cards = cardsInZone(zone, excludeId);
+          for (let i = 0; i < cards.length; i++) {
+            const r = cards[i].getBoundingClientRect();
+            const mid = r.top + r.height / 2;
+            if (clientY < mid) return i;
+          }
+          return cards.length;
+        }
+
+        function effectiveInsertIndex(zone, clientY, excludeId) {
+          if (isHeaderDropZone(zone)) return APPEND_INDEX;
+          return insertIndexFromY(zone, clientY, excludeId);
+        }
+
+        let indicator = document.getElementById('task-list-drop-indicator');
+        if (!indicator) {
+          indicator = document.createElement('div');
+          indicator.id = 'task-list-drop-indicator';
+          indicator.className = 'drop-indicator';
+          indicator.style.display = 'none';
+          document.body.appendChild(indicator);
+        }
+
+        function hideIndicator() {
+          indicator.style.display = 'none';
+        }
+
+        function showIndicator(zone, insertIdx, excludeId) {
+          const cards = cardsInZone(zone, excludeId);
+          const zr = zone.getBoundingClientRect();
+          let top;
+          if (insertIdx >= cards.length) {
+            if (cards.length === 0) {
+              top = zr.top + 4;
+            } else {
+              const last = cards[cards.length - 1].getBoundingClientRect();
+              top = last.bottom + 2;
+            }
+          } else {
+            const r = cards[insertIdx].getBoundingClientRect();
+            top = r.top - 2;
+          }
+          indicator.style.display = 'block';
+          indicator.style.position = 'fixed';
+          indicator.style.left = zr.left + 'px';
+          indicator.style.width = Math.max(0, zr.width) + 'px';
+          indicator.style.top = top + 'px';
+          indicator.style.zIndex = '10000';
+        }
+
+        function showHeaderAppendIndicator(zone) {
+          const zr = zone.getBoundingClientRect();
+          indicator.style.display = 'block';
+          indicator.style.position = 'fixed';
+          indicator.style.left = zr.left + 'px';
+          indicator.style.width = Math.max(0, zr.width) + 'px';
+          indicator.style.top = zr.bottom - 1 + 'px';
+          indicator.style.zIndex = '10000';
+        }
+
+        document.addEventListener('dragstart', (e) => {
+          const card = e.target.closest('.task-card[draggable="true"]');
+          if (!card) return;
+          draggedTaskId = card.dataset.taskId;
+          const z = getDropZone(card);
+          dragSourceState = z ? z.dataset.stateName : null;
+          card.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', draggedTaskId);
+        });
+
+        document.addEventListener('dragend', (e) => {
+          const card = e.target.closest('.task-card');
+          if (card) card.classList.remove('dragging');
+          document.querySelectorAll('[data-state-name].drag-over').forEach((el) => el.classList.remove('drag-over'));
+          hideIndicator();
+          taskListSuppressClickUntil = Date.now() + 250;
+          draggedTaskId = null;
+          dragSourceState = null;
+        });
+
+        document.addEventListener('dragover', (e) => {
+          if (!draggedTaskId) return;
+          const zone = getDropZone(e.target);
+          if (!zone) {
+            document.querySelectorAll('[data-state-name].drag-over').forEach((el) => el.classList.remove('drag-over'));
+            hideIndicator();
+            return;
+          }
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          document.querySelectorAll('[data-state-name].drag-over').forEach((el) => el.classList.remove('drag-over'));
+          zone.classList.add('drag-over');
+          if (isHeaderDropZone(zone)) {
+            showHeaderAppendIndicator(zone);
+          } else {
+            const idx = insertIndexFromY(zone, e.clientY, draggedTaskId);
+            showIndicator(zone, idx, draggedTaskId);
+          }
+        });
+
+        document.addEventListener('dragleave', (e) => {
+          const zone = getDropZone(e.target);
+          if (zone && !zone.contains(e.relatedTarget)) {
+            zone.classList.remove('drag-over');
+          }
+        });
+
+        document.addEventListener('drop', (e) => {
+          if (!draggedTaskId) return;
+          e.preventDefault();
+          const zone = getDropZone(e.target);
+          if (!zone) return;
+          zone.classList.remove('drag-over');
+          hideIndicator();
+          const targetState = zone.dataset.stateName;
+          const insertIdx = effectiveInsertIndex(zone, e.clientY, draggedTaskId);
+          if (dragSourceState === targetState) {
+            vscode.postMessage({ type: 'reorderTask', taskId: draggedTaskId, newIndex: insertIdx });
+          } else {
+            vscode.postMessage({
+              type: 'moveTask',
+              taskId: draggedTaskId,
+              targetState,
+              targetIndex: insertIdx,
+            });
+          }
+          if (isHeaderDropZone(zone) && zone.dataset.collapsed === 'true') {
+            vscode.postMessage({ type: 'expandGroup', groupLabel: targetState });
+          }
+        });
+      })();
+      `
+          : ''
+      }
     `;
 
     const extraStyles = `
@@ -621,6 +801,39 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         .group-tasks.hidden {
           display: none;
         }
+        [data-state-name].group-tasks {
+          border: 2px solid transparent;
+          border-radius: 4px;
+          padding: 2px;
+          transition: border-color 0.15s;
+          min-height: 4px;
+        }
+        [data-state-name].group-tasks.drag-over {
+          border-color: var(--accent);
+          border-style: dashed;
+        }
+        .group-header.group-header-dnd[data-state-name] {
+          border: 2px solid transparent;
+          border-radius: 4px;
+          transition: border-color 0.15s;
+        }
+        .group-header.group-header-dnd[data-state-name].drag-over {
+          border-color: var(--accent);
+          border-style: dashed;
+        }
+        .drop-indicator {
+          height: 2px;
+          background: var(--accent);
+          border-radius: 1px;
+          margin: 0;
+          pointer-events: none;
+        }
+        .task-card[draggable="true"] {
+          cursor: grab;
+        }
+        .task-card.dragging {
+          opacity: 0.4;
+        }
         .task-card {
           position: relative;
           padding: 6px 8px;
@@ -728,28 +941,35 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     return getWebviewHtml(this.view!.webview, 'Tasks', extraStyles + body, script);
   }
 
-  private buildGroupSection(group: GroupViewData): string {
+  private buildGroupSection(group: GroupViewData, groupBy: string): string {
     const isCollapsedByDefault = group.collapsed && !this.expandedGroups.has(group.label);
     const isHidden = isCollapsedByDefault && !this.filter.query;
     const chevronClass = isHidden ? 'group-chevron collapsed' : 'group-chevron';
     const tasksClass = isHidden ? 'group-tasks hidden' : 'group-tasks';
+    const dndByStatus = groupBy === 'status';
+    const stateAttr = dndByStatus ? ` data-state-name="${this.escapeAttr(group.label)}"` : '';
 
-    const cards = group.tasks.map((t) => this.buildTaskCard(t)).join('\n');
+    const cards = group.tasks.map((t) => this.buildTaskCard(t, dndByStatus)).join('\n');
     const showMore = group.hasMore
       ? `<div class="show-more" data-action="showAll" data-group-label="${this.escapeAttr(group.label)}">Showing ${group.tasks.length} of ${group.totalCount} — Show all</div>`
       : '';
 
-    const empty = group.tasks.length === 0 && !this.filter.query
-      ? '<div class="empty-state">No tasks</div>'
-      : '';
+    const empty =
+      group.tasks.length === 0 && !this.filter.query
+        ? '<div class="empty-state">No tasks</div>'
+        : '';
+
+    const headerDndClass = dndByStatus ? ' group-header-dnd' : '';
+    const headerStateAttr = dndByStatus ? ` data-state-name="${this.escapeAttr(group.label)}"` : '';
+    const headerCollapsedAttr = dndByStatus ? ` data-collapsed="${isHidden ? 'true' : 'false'}"` : '';
 
     return `
       <div class="group-section">
-        <div class="group-header" data-action="toggleGroup" data-group-label="${this.escapeAttr(group.label)}">
+        <div class="group-header${headerDndClass}" data-action="toggleGroup" data-group-label="${this.escapeAttr(group.label)}"${headerStateAttr}${headerCollapsedAttr}>
           <span class="${chevronClass}">&#9660;</span>
           <h2>${this.escapeHtml(group.label)} <span class="count-badge">(${group.totalCount})</span></h2>
         </div>
-        <div class="${tasksClass}">
+        <div class="${tasksClass}"${stateAttr}>
           ${cards}
           ${empty}
           ${showMore}
@@ -758,22 +978,26 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     `;
   }
 
-  private buildTaskCard(task: TaskViewItem): string {
+  private buildTaskCard(task: TaskViewItem, draggable: boolean): string {
     const tags = task.tags.map((t) => `<span class="tag">${this.escapeHtml(t)}</span>`).join('');
 
     const metaParts: string[] = [];
     if (task.assignee) {
-      metaParts.push(`<span class="task-meta-item">&#128100; ${this.escapeHtml(task.assignee)}</span>`);
+      metaParts.push(
+        `<span class="task-meta-item">&#128100; ${this.escapeHtml(task.assignee)}</span>`,
+      );
     }
     if (task.updatedAt) {
-      metaParts.push(`<span class="task-meta-item">&#128339; ${this.escapeHtml(task.updatedAt)}</span>`);
+      metaParts.push(
+        `<span class="task-meta-item">&#128339; ${this.escapeHtml(task.updatedAt)}</span>`,
+      );
     }
-    const metaHtml = metaParts.length > 0
-      ? `<div class="task-meta">${metaParts.join('')}</div>`
-      : '';
+    const metaHtml =
+      metaParts.length > 0 ? `<div class="task-meta">${metaParts.join('')}</div>` : '';
 
+    const dragAttr = draggable ? ' draggable="true"' : '';
     return `
-      <div class="task-card" data-action="viewTask" data-task-id="${task.id}">
+      <div class="task-card" data-action="viewTask" data-task-id="${task.id}"${dragAttr}>
         <div class="priority-bar priority-${task.priority}"></div>
         <div class="task-content">
           <div class="task-header">
@@ -783,7 +1007,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           ${tags ? `<div class="task-tags">${tags}</div>` : ''}
           ${metaHtml}
         </div>
-        <button class="card-ai-btn" data-action="implementWithAi" data-task-id="${task.id}" title="Implement with AI"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5Z" fill="#ec4899"/><path d="M12.5 0l.75 2.25L15.5 3l-2.25.75L12.5 6l-.75-2.25L9.5 3l2.25-.75Z" fill="#8b5cf6" opacity="0.8"/></svg></button>
+        <button type="button" class="card-ai-btn" draggable="false" data-action="implementWithAi" data-task-id="${task.id}" title="Implement with AI"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5Z" fill="#ec4899"/><path d="M12.5 0l.75 2.25L15.5 3l-2.25.75L12.5 6l-.75-2.25L9.5 3l2.25-.75Z" fill="#8b5cf6" opacity="0.8"/></svg></button>
       </div>
     `;
   }
@@ -1278,7 +1502,11 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
   // ── Helpers ───────────────────────────────────────────────────────
 
   private escapeHtml(text: string): string {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   private escapeAttr(text: string): string {

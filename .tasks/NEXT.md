@@ -1,13 +1,5 @@
 # Next
 
-## TASK-031: Make tasks draggable in the basic Task list view
-**Priority:** P2 | **Tags:** ui, feature
-**Updated:** 2026-04-01
-
-Allow users to reorder tasks in the basic Task list view by dragging (within a group and/or between groups, consistent with how grouping works). Align drag-and-drop behavior and feedback with the Kanban board where it makes sense.
-
----
-
 ## TASK-024: Performance measurement and scalability limits
 **Priority:** P2 | **Tags:** core, testing
 **Updated:** 2026-04-01 19:36
