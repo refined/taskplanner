@@ -18,12 +18,18 @@ export function composeImplementationPrompt(
     .replace(/(^-|-$)/g, '')
     .slice(0, 40);
 
-  const lines: string[] = [
+  const lines: string[] = [];
+
+  if (config.aiPlanRequired) {
+    lines.push('Use plan mode. Read and analyze before making changes.', '');
+  }
+
+  lines.push(
     `Implement task ${task.id}: ${task.title}`,
     '',
     meta.join(' | '),
     '',
-  ];
+  );
 
   if (task.description.trim()) {
     lines.push('Description:', task.description.trim(), '');

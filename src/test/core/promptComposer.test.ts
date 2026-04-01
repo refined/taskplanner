@@ -34,18 +34,25 @@ describe('composeImplementationPrompt', () => {
     expect(result).toContain('Add an Implement with AI action button.');
   });
 
+  it('includes plan-mode instruction when aiPlanRequired is true', () => {
+    const withPlan: TaskPlannerConfig = { ...config, aiPlanRequired: true };
+    const result = composeImplementationPrompt(makeTask(), 'Next', withPlan);
+    expect(result).toContain('Use plan mode. Read and analyze before making changes.');
+  });
+
+  it('omits plan-mode instruction when aiPlanRequired is false', () => {
+    const noPlanConfig: TaskPlannerConfig = { ...config, aiPlanRequired: false };
+    const result = composeImplementationPrompt(makeTask(), 'Backlog', noPlanConfig);
+    expect(result).not.toContain('Use plan mode.');
+    expect(result).not.toContain('### Plan subsection');
+    expect(result).toContain('Move the task to DONE.md');
+  });
+
   it('includes workflow steps with plan requirement', () => {
     const result = composeImplementationPrompt(makeTask(), 'Next', config);
     expect(result).toContain('Create a git branch: feature/TASK-026-');
     expect(result).toContain('Move the task from Next to In Progress');
     expect(result).toContain('Write a ### Plan subsection');
-    expect(result).toContain('Move the task to DONE.md');
-  });
-
-  it('omits plan step when aiPlanRequired is false', () => {
-    const noPlanConfig: TaskPlannerConfig = { ...config, aiPlanRequired: false };
-    const result = composeImplementationPrompt(makeTask(), 'Backlog', noPlanConfig);
-    expect(result).not.toContain('### Plan subsection');
     expect(result).toContain('Move the task to DONE.md');
   });
 

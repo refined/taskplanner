@@ -2,7 +2,7 @@
   "name": "taskplanner",
   "displayName": "Task. Plan. AI.",
   "description": "AI-directed markdown task management in your repo. Generates CLAUDE.md and .cursorrules so agents can follow your workflow contract. Tracked by git.",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "publisher": "refined",
   "license": "GPL v3",
   "icon": "resources/icons/taskplanner-color.png",
@@ -119,6 +119,11 @@
         "command": "taskplanner.implementWithAi",
         "title": "TaskPlanner: Implement Task with AI",
         "icon": "$(sparkle)"
+      },
+      {
+        "command": "taskplanner.configureAiProvider",
+        "title": "TaskPlanner: Configure AI Provider",
+        "icon": "$(hubot)"
       }
     ],
     "menus": {
@@ -182,19 +187,36 @@
         "taskplanner.aiTool": {
           "type": "string",
           "default": "auto",
+          "scope": "window",
           "enum": [
             "auto",
             "cursor",
             "claude-code",
+            "vscode-chat",
+            "claude-cli",
             "clipboard"
           ],
           "enumDescriptions": [
-            "Auto-detect: Cursor Composer if in Cursor IDE, otherwise Claude Code terminal",
-            "Cursor Composer",
-            "Claude Code (opens Claude Code panel with prompt)",
-            "Copy prompt to clipboard"
+            "Auto: Cursor in Cursor IDE; otherwise Claude Code extension",
+            "Cursor (chat.open, then Agent Chat paste fallback)",
+            "Claude Code extension (URI opens sidebar with prompt)",
+            "VS Code Chat (workbench.action.chat.open)",
+            "Claude Code CLI in integrated terminal (see claudeCliCommand; uses {{file}} for temp prompt path)",
+            "Copy prompt to clipboard only"
           ],
-          "description": "AI tool to use for the 'Implement with AI' action"
+          "description": "AI tool for 'Implement with AI'. Prefer User settings for a default across projects; workspace can override."
+        },
+        "taskplanner.cursorPlanAndSubmitAfterOpen": {
+          "type": "boolean",
+          "default": false,
+          "scope": "window",
+          "description": "Cursor only: after Tier 1 chat.open succeeds, best-effort run plan-mode and submit commands (may not exist in all Cursor versions)."
+        },
+        "taskplanner.claudeCliCommand": {
+          "type": "string",
+          "default": "claude {{file}}",
+          "scope": "window",
+          "description": "claude-cli provider: shell line to run; {{file}} is replaced with the temp UTF-8 prompt file path."
         }
       }
     }

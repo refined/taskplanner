@@ -26,6 +26,7 @@ AI-directed markdown task tracking built for AI-assisted development. Tasks live
 - **Assignee & timestamps** — track who owns each task and when it was last updated
 - **AI instruction generation** — auto-generates `CLAUDE.md` and `.cursorrules` that teach agents your task workflow
 - **AI planning mode** — agents write a `### Plan` inside the task before coding; the plan is preserved when moving to Done
+- **Implement with AI** — sends a composed prompt to Cursor, Claude Code, VS Code Chat, the Claude CLI (terminal), or clipboard; configure via Settings (`taskplanner.aiTool`) or **TaskPlanner: Configure AI Provider**
 - **Live file watcher** — edit `.tasks/*.md` by hand and all views update instantly
 - **Configurable** — custom states, priorities (P0–P4), tags, ID prefix, sort order
 

@@ -1,5 +1,21 @@
 # Done
 
+## TASK-030: Cursor sidebar prompt integration
+**Priority:** P3 | **Tags:** feature, ui
+**Updated:** 2026-04-01 20:45
+
+Update `dispatchCursor()` to use Cursor 2.3+ prompt injection support: try `workbench.action.chat.open` with query, then `composer.newAgentChat` + clipboard paste, then copy-only fallback. When `aiPlanRequired` is true, prepend a plan-mode line to the composed prompt.
+
+### Plan
+
+- Tier 1: `workbench.action.chat.open` with `{ query, isPartialQuery: false }` in `implementWithAi.ts`
+- Tier 2: save clipboard, write prompt, `composer.newAgentChat`, delay 150ms, `editor.action.clipboardPasteAction`, restore clipboard
+- Tier 3: existing `copyToClipboard` message
+- `promptComposer.ts`: prepend "Use plan mode. Read and analyze before making changes." when `aiPlanRequired`
+- Extended Vitest coverage for plan-mode line; Claude Code path unchanged
+
+---
+
 ## TASK-026: [Claude] Implement with AI button on tasks
 **Priority:** P1 | **Tags:** feature, ui
 **Updated:** 2026-04-01 12:38

@@ -1,9 +1,62 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { TaskStore } from '../../core/store/taskStore.js';
 import { ConfigManager } from '../../core/config/configManager.js';
 import { composeImplementationPrompt } from '../../core/ai/promptComposer.js';
 
-type AiTool = 'auto' | 'cursor' | 'claude-code' | 'clipboard';
+export type AiTool = 'auto' | 'cursor' | 'claude-code' | 'vscode-chat' | 'claude-cli' | 'clipboard';
+
+const GLOBAL_ONBOARDING_KEY = 'taskplanner.aiProviderOnboarding';
+const CHAT_OPEN_COMMAND = 'workbench.action.chat.open';
+
+/** Best-effort Cursor-internal commands after Tier 1 (may not exist in all builds). */
+const CURSOR_PLAN_COMMANDS = ['composerMode.plan', 'cursor.composer.plan'];
+const CURSOR_SUBMIT_COMMANDS = ['workbench.action.chat.acceptInput', 'chat.action.acceptInput'];
+
+let aiLogChannel: vscode.OutputChannel | undefined;
+
+function getAiLogChannel(context: vscode.ExtensionContext): vscode.OutputChannel {
+  if (!aiLogChannel) {
+    aiLogChannel = vscode.window.createOutputChannel('TaskPlanner AI');
+    context.subscriptions.push(aiLogChannel);
+  }
+  return aiLogChannel;
+}
+
+function logTier1Failure(context: vscode.ExtensionContext, reason: string): void {
+  const ch = getAiLogChannel(context);
+  const line = `[${new Date().toISOString()}] Cursor Tier 1 (${CHAT_OPEN_COMMAND}) failed: ${reason}`;
+  ch.appendLine(line);
+}
+
+export async function openVsCodeChat(prompt: string): Promise<void> {
+  await vscode.commands.executeCommand(CHAT_OPEN_COMMAND, {
+    query: prompt,
+    isPartialQuery: false,
+  });
+}
+
+async function tryCursorPlanAndSubmit(): Promise<void> {
+  for (const id of CURSOR_PLAN_COMMANDS) {
+    try {
+      await vscode.commands.executeCommand(id);
+      break;
+    } catch {
+      /* try next */
+    }
+  }
+  await delay(100);
+  for (const id of CURSOR_SUBMIT_COMMANDS) {
+    try {
+      await vscode.commands.executeCommand(id);
+      break;
+    } catch {
+      /* try next */
+    }
+  }
+}
 
 export function registerImplementWithAiCommand(
   context: vscode.ExtensionContext,
@@ -28,9 +81,92 @@ export function registerImplementWithAiCommand(
       const setting = vscode.workspace.getConfiguration('taskplanner').get<AiTool>('aiTool', 'auto');
       const tool = setting === 'auto' ? detectAiTool() : setting;
 
-      await dispatch(tool, prompt);
+      await dispatch(context, tool, prompt);
     }),
   );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('taskplanner.configureAiProvider', async () => {
+      await showAiProviderQuickPick(context);
+    }),
+  );
+}
+
+/** One-time prompt to pick default AI tool; safe to call when `.tasks` exists. */
+export function registerAiProviderOnboarding(
+  context: vscode.ExtensionContext,
+  isInitialized: boolean,
+): void {
+  if (!isInitialized) {
+    return;
+  }
+  const state = context.globalState.get<string>(GLOBAL_ONBOARDING_KEY);
+  if (state === 'done' || state === 'later') {
+    return;
+  }
+  setTimeout(() => {
+    void vscode.window
+      .showInformationMessage(
+        'TaskPlanner: Choose your default AI tool for “Implement with AI” (optional).',
+        'Choose AI provider',
+        'Later',
+      )
+      .then((sel) => {
+        if (sel === 'Choose AI provider') {
+          void showAiProviderQuickPick(context);
+        } else if (sel === 'Later') {
+          void context.globalState.update(GLOBAL_ONBOARDING_KEY, 'later');
+        }
+      });
+  }, 2500);
+}
+
+async function showAiProviderQuickPick(context: vscode.ExtensionContext): Promise<void> {
+  const items: { label: string; description: string; value: AiTool }[] = [
+    {
+      label: '$(hubot) Auto',
+      description: 'Cursor in Cursor IDE; otherwise Claude Code',
+      value: 'auto',
+    },
+    {
+      label: '$(sparkle) Cursor',
+      description: 'Composer / Agent Chat (tiered delivery)',
+      value: 'cursor',
+    },
+    {
+      label: '$(terminal) Claude Code (extension)',
+      description: 'Anthropic Claude Code sidebar via URI',
+      value: 'claude-code',
+    },
+    {
+      label: '$(comment-discussion) VS Code Chat',
+      description: 'workbench Chat (e.g. Copilot Chat)',
+      value: 'vscode-chat',
+    },
+    {
+      label: '$(console) Claude Code CLI',
+      description: 'Integrated terminal (see claudeCliCommand)',
+      value: 'claude-cli',
+    },
+    {
+      label: '$(clippy) Clipboard only',
+      description: 'Copy prompt for any tool',
+      value: 'clipboard',
+    },
+  ];
+
+  const picked = await vscode.window.showQuickPick(items, {
+    placeHolder: 'AI tool for Implement with AI',
+  });
+  if (!picked) {
+    return;
+  }
+
+  await vscode.workspace
+    .getConfiguration('taskplanner')
+    .update('aiTool', picked.value, vscode.ConfigurationTarget.Global);
+  await context.globalState.update(GLOBAL_ONBOARDING_KEY, 'done');
+  vscode.window.showInformationMessage(`TaskPlanner: AI tool set to "${picked.value}".`);
 }
 
 function detectAiTool(): Exclude<AiTool, 'auto'> {
@@ -41,13 +177,23 @@ function detectAiTool(): Exclude<AiTool, 'auto'> {
   return 'claude-code';
 }
 
-async function dispatch(tool: Exclude<AiTool, 'auto'>, prompt: string): Promise<void> {
+async function dispatch(
+  context: vscode.ExtensionContext,
+  tool: Exclude<AiTool, 'auto'>,
+  prompt: string,
+): Promise<void> {
   switch (tool) {
     case 'cursor':
-      await dispatchCursor(prompt);
+      await dispatchCursor(context, prompt);
       break;
     case 'claude-code':
       await dispatchClaudeCode(prompt);
+      break;
+    case 'vscode-chat':
+      await dispatchVsCodeChat(prompt);
+      break;
+    case 'claude-cli':
+      await dispatchClaudeCli(prompt);
       break;
     case 'clipboard':
       await copyToClipboard(prompt);
@@ -55,24 +201,92 @@ async function dispatch(tool: Exclude<AiTool, 'auto'>, prompt: string): Promise<
   }
 }
 
-async function dispatchCursor(prompt: string): Promise<void> {
-  // Try known Cursor Composer commands
-  const cursorCommands = [
-    'composerMode.agent',
-    'aipane.aichat.open',
-  ];
+async function dispatchVsCodeChat(prompt: string): Promise<void> {
+  try {
+    await openVsCodeChat(prompt);
+    vscode.window.showInformationMessage('Prompt opened in VS Code Chat — review and submit.');
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    vscode.window.showWarningMessage(
+      `VS Code Chat could not be opened (${msg}). Prompt copied to clipboard.`,
+    );
+    await copyToClipboard(prompt);
+  }
+}
 
-  for (const cmd of cursorCommands) {
-    try {
-      await vscode.commands.executeCommand(cmd, prompt);
-      return;
-    } catch {
-      // Command not available, try next
-    }
+async function dispatchClaudeCli(prompt: string): Promise<void> {
+  const template = vscode.workspace
+    .getConfiguration('taskplanner')
+    .get<string>('claudeCliCommand', 'claude {{file}}');
+  const tmpDir = os.tmpdir();
+  const filePath = path.join(tmpDir, `taskplanner-ai-prompt-${Date.now()}.txt`);
+  try {
+    await fs.promises.writeFile(filePath, prompt, 'utf8');
+  } catch {
+    await copyToClipboard(prompt, 'Could not write temp file for Claude CLI.');
+    return;
   }
 
-  // Fallback: copy to clipboard and notify
-  await copyToClipboard(prompt, 'Cursor Composer command not available.');
+  try {
+    const line = template.includes('{{file}}')
+      ? template.replace(/\{\{file\}\}/g, filePath)
+      : `${template} ${JSON.stringify(filePath)}`;
+    const term = vscode.window.createTerminal({ name: 'TaskPlanner Claude' });
+    term.show();
+    term.sendText(line, true);
+    vscode.window.showInformationMessage('Started Claude CLI in terminal — check the panel.');
+  } catch {
+    await copyToClipboard(prompt, 'Claude CLI terminal could not be started.');
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function dispatchCursor(context: vscode.ExtensionContext, prompt: string): Promise<void> {
+  let tier1Ok = false;
+  try {
+    await openVsCodeChat(prompt);
+    tier1Ok = true;
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e);
+    logTier1Failure(context, reason);
+    vscode.window.showWarningMessage(
+      'Cursor quick-open failed; using Agent Chat paste fallback. See output “TaskPlanner AI” for details.',
+    );
+  }
+
+  if (tier1Ok) {
+    const planSubmit = vscode.workspace
+      .getConfiguration('taskplanner')
+      .get<boolean>('cursorPlanAndSubmitAfterOpen', false);
+    if (planSubmit) {
+      await delay(200);
+      await tryCursorPlanAndSubmit();
+    }
+    vscode.window.showInformationMessage('Prompt sent to Cursor chat — review if needed.');
+    return;
+  }
+
+  const saved = await vscode.env.clipboard.readText();
+  try {
+    await vscode.env.clipboard.writeText(prompt);
+    await vscode.commands.executeCommand('composer.newAgentChat');
+    await delay(150);
+    await vscode.commands.executeCommand('editor.action.clipboardPasteAction');
+    vscode.window.showInformationMessage(
+      'Prompt pasted into Cursor Agent Chat — review and submit.',
+    );
+    return;
+  } catch {
+    /* Tier 3 */
+  } finally {
+    await delay(100);
+    await vscode.env.clipboard.writeText(saved);
+  }
+
+  await copyToClipboard(prompt, 'Cursor chat commands not available.');
 }
 
 // TODO: Open prompt directly in Claude Code sidebar once supported.

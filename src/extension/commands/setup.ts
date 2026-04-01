@@ -48,6 +48,12 @@ export function registerSetupCommand(
         action: 'togglePlan',
       });
 
+      items.push({
+        label: '$(hubot) Configure AI Provider',
+        description: "Choose Cursor, Claude Code, VS Code Chat, CLI, or clipboard for 'Implement with AI'",
+        action: 'configureAi',
+      });
+
       const sortLabels: Record<string, string> = {
         priority: 'Priority',
         name: 'Name',
@@ -85,6 +91,9 @@ export function registerSetupCommand(
           vscode.window.showInformationMessage(
             `AI Planning ${!config.aiPlanRequired ? 'enabled' : 'disabled'}. Run "Initialize AI Instructions" to update AI files.`,
           );
+          break;
+        case 'configureAi':
+          await vscode.commands.executeCommand('taskplanner.configureAiProvider');
           break;
         case 'sortBy': {
           const sortOptions = [
