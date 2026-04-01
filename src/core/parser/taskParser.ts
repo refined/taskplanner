@@ -1,4 +1,5 @@
 import { Task, Priority, isPriority } from '../model/task.js';
+import { ParseResult } from '../model/parseResult.js';
 
 const TASK_HEADING_RE = /^## ([A-Z]+-\d+):\s*(.+)$/;
 const PRIORITY_RE = /^\*\*Priority:\*\*\s*(\S+)/;
@@ -9,10 +10,18 @@ const UPDATED_RE = /^\*\*Updated:\*\*\s*(.+)/;
 const SEPARATOR_RE = /^---\s*$/;
 const PLAN_HEADING_RE = /^### Plan\s*$/;
 
-export function parseTasks(content: string): Task[] {
+export function parseTasks(rawContent: string): ParseResult {
+  let content = rawContent;
+  if (content.length > 0 && content.charCodeAt(0) === 0xfeff) {
+    content = content.slice(1);
+  }
+
   const lines = content.split('\n');
   const tasks: Task[] = [];
+  const warnings: ParseWarning[] = [];
+
   let current: Partial<Task> | null = null;
+  let currentHeadingLine = 0;
   let descriptionLines: string[] = [];
   let planLines: string[] = [];
   let inMetadata = true;
@@ -32,6 +41,11 @@ export function parseTasks(content: string): Task[] {
         updatedAt: current.updatedAt,
         ...(plan ? { plan } : {}),
       });
+    } else if (current) {
+      warnings.push({
+        line: currentHeadingLine,
+        message: 'Incomplete task section could not be parsed (invalid or empty title)',
+      });
     }
     current = null;
     descriptionLines = [];
@@ -40,20 +54,49 @@ export function parseTasks(content: string): Task[] {
     inPlan = false;
   }
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
     const headingMatch = line.match(TASK_HEADING_RE);
+
     if (headingMatch) {
       flushTask();
+      const title = headingMatch[2].trim();
+      if (!title) {
+        warnings.push({
+          line: lineNum,
+          message: 'Task heading has no title',
+        });
+        current = null;
+        continue;
+      }
       current = {
         id: headingMatch[1],
-        title: headingMatch[2].trim(),
+        title,
         tags: [],
       };
+      currentHeadingLine = lineNum;
       inMetadata = true;
       continue;
     }
 
     if (!current) {
+      const t = line.trim();
+      if (t === '') continue;
+      if (SEPARATOR_RE.test(line)) continue;
+      if (/^#\s/.test(line) && !line.startsWith('##')) continue;
+      if (/^##\s/.test(line)) {
+        warnings.push({
+          line: lineNum,
+          message:
+            'Invalid task heading (use ## PREFIX-NNN: Title with uppercase prefix and digits)',
+        });
+        continue;
+      }
+      warnings.push({
+        line: lineNum,
+        message: 'Content is not part of any task (expected a ## TASK-NNN: Title heading)',
+      });
       continue;
     }
 
@@ -63,7 +106,6 @@ export function parseTasks(content: string): Task[] {
     }
 
     if (inMetadata) {
-      // Support pipe-separated metadata on a single line
       const segments = line.includes('|') ? line.split('|').map((s) => s.trim()) : [line];
       let matchedAny = false;
 
@@ -80,7 +122,7 @@ export function parseTasks(content: string): Task[] {
         if (tagsMatch) {
           current.tags = tagsMatch[1]
             .split(',')
-            .map((t) => t.trim())
+            .map((tag) => tag.trim())
             .filter(Boolean);
           matchedAny = true;
           continue;
@@ -117,7 +159,6 @@ export function parseTasks(content: string): Task[] {
         continue;
       }
 
-      // Unknown metadata line — treat as start of description
       inMetadata = false;
       descriptionLines.push(line);
     } else if (PLAN_HEADING_RE.test(line)) {
@@ -130,7 +171,7 @@ export function parseTasks(content: string): Task[] {
   }
 
   flushTask();
-  return tasks;
+  return { tasks, warnings };
 }
 
 export function findTaskLineNumber(content: string, taskId: string): number {
@@ -138,7 +179,7 @@ export function findTaskLineNumber(content: string, taskId: string): number {
   for (let i = 0; i < lines.length; i++) {
     const match = lines[i].match(TASK_HEADING_RE);
     if (match && match[1] === taskId) {
-      return i + 1; // 1-based
+      return i + 1;
     }
   }
   return 1;

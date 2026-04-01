@@ -100,8 +100,16 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   );
 
-  // File watcher
-  const watcher = createFileWatcher(workspaceFolder.uri.fsPath, taskDirName, configManager, taskStore);
+  const taskPlannerLog = vscode.window.createOutputChannel('TaskPlanner');
+  context.subscriptions.push(taskPlannerLog);
+
+  const watcher = createFileWatcher(
+    workspaceFolder.uri.fsPath,
+    taskDirName,
+    configManager,
+    taskStore,
+    taskPlannerLog,
+  );
 
   context.subscriptions.push(viewProviderDisposable, watcher);
 }

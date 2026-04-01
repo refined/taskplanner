@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { TaskStore } from '../../../core/store/taskStore.js';
 import { ConfigManager } from '../../../core/config/configManager.js';
 import { groupTasks } from '../../../core/filter/taskFilter.js';
@@ -16,6 +17,8 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
   private expandedGroups: Set<string> = new Set();
   private activeTaskId: string | null = null;
   private storeDisposable?: { dispose: () => void };
+  private parseWarningsDismissed = false;
+  private parseWarningsKey = '';
 
   constructor(
     private taskStore: TaskStore,
@@ -170,11 +173,37 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       case 'command':
         vscode.commands.executeCommand(msg.command as string);
         break;
+      case 'openParseWarningFile': {
+        const fileName = msg.fileName as string;
+        const line = typeof msg.line === 'number' ? msg.line : 1;
+        const dir = this.configManager.getTasksDir();
+        const uri = vscode.Uri.file(path.join(dir, fileName));
+        void vscode.workspace.openTextDocument(uri).then((doc) => {
+          void vscode.window.showTextDocument(doc, {
+            selection: new vscode.Range(line - 1, 0, line - 1, 0),
+          });
+        });
+        break;
+      }
+      case 'dismissParseWarnings':
+        this.parseWarningsDismissed = true;
+        this.update();
+        break;
+    }
+  }
+
+  private syncParseWarningDismissState(): void {
+    const key = JSON.stringify(this.taskStore.getWarnings());
+    if (key !== this.parseWarningsKey) {
+      this.parseWarningsKey = key;
+      this.parseWarningsDismissed = false;
     }
   }
 
   private update(): void {
     if (!this.view) return;
+
+    this.syncParseWarningDismissState();
 
     if (!this.isInitialized()) {
       this.view.webview.html = this.buildWelcomeHtml();
@@ -257,6 +286,39 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
   // ── List view ─────────────────────────────────────────────────────
 
+  private buildParseWarningBanner(): string {
+    if (this.parseWarningsDismissed) {
+      return '';
+    }
+    const grouped = this.taskStore.getWarnings();
+    if (grouped.length === 0) {
+      return '';
+    }
+
+    const rows = grouped
+      .map(({ fileName, warnings }) => {
+        const first = warnings[0];
+        const summary =
+          warnings.length === 1
+            ? `Line ${first.line}: ${this.escapeHtml(first.message)}`
+            : `${warnings.length} issues (first at line ${first.line})`;
+        return `
+      <div class="parse-warning-row">
+        <span class="parse-warning-file">${this.escapeHtml(fileName)}</span>
+        <span class="parse-warning-msg">${summary}</span>
+        <button type="button" class="parse-warning-open" data-action="openParseWarningFile" data-file-name="${this.escapeAttr(fileName)}" data-line="${first.line}">Open</button>
+      </div>`;
+      })
+      .join('');
+
+    return `
+      <div class="parse-warning-banner" role="alert">
+        <div class="parse-warning-title">Some task markdown could not be parsed</div>
+        ${rows}
+        <button type="button" class="parse-warning-dismiss" data-action="dismissParseWarnings">Dismiss</button>
+      </div>`;
+  }
+
   private buildListHtml(groups: GroupViewData[], groupBy: string): string {
     const states = this.configManager.get().states;
     const statusFilterItems = [
@@ -332,6 +394,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
     const body = `
       ${filterBar}
+      ${this.buildParseWarningBanner()}
       <div id="taskSections">${sections}</div>
     `;
 
@@ -428,6 +491,16 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         } else if (action === 'implementWithAi') {
           e.stopPropagation();
           vscode.postMessage({ type: 'implementWithAi', taskId: btn.dataset.taskId });
+        } else if (action === 'openParseWarningFile') {
+          e.preventDefault();
+          vscode.postMessage({
+            type: 'openParseWarningFile',
+            fileName: btn.dataset.fileName,
+            line: parseInt(btn.dataset.line ?? '1', 10),
+          });
+        } else if (action === 'dismissParseWarnings') {
+          e.preventDefault();
+          vscode.postMessage({ type: 'dismissParseWarnings' });
         }
       });
     `;
@@ -602,6 +675,53 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           align-items: center;
           gap: 2px;
         }
+        .parse-warning-banner {
+          border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-border));
+          background: var(--vscode-inputValidation-warningBackground, rgba(255, 204, 0, 0.12));
+          color: var(--vscode-editorWarning-foreground, var(--vscode-editorWarning-foreground));
+          border-radius: 4px;
+          padding: 8px 10px;
+          margin-bottom: 8px;
+          font-size: 0.85em;
+        }
+        .parse-warning-title {
+          font-weight: 600;
+          margin-bottom: 6px;
+          color: var(--vscode-editorWarning-foreground, var(--vscode-foreground));
+        }
+        .parse-warning-row {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 6px;
+          margin-bottom: 4px;
+        }
+        .parse-warning-file {
+          font-weight: 500;
+        }
+        .parse-warning-msg {
+          flex: 1;
+          min-width: 120px;
+          color: var(--muted-fg);
+        }
+        .parse-warning-open,
+        .parse-warning-dismiss {
+          background: var(--vscode-button-secondaryBackground);
+          color: var(--vscode-button-secondaryForeground);
+          border: none;
+          padding: 2px 10px;
+          border-radius: 3px;
+          cursor: pointer;
+          font-family: inherit;
+          font-size: inherit;
+        }
+        .parse-warning-open:hover,
+        .parse-warning-dismiss:hover {
+          background: var(--vscode-button-secondaryHoverBackground);
+        }
+        .parse-warning-dismiss {
+          margin-top: 6px;
+        }
       </style>
     `;
 
@@ -691,6 +811,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     const body = `
       <div class="detail-view">
         <button class="back-btn" id="backBtn">&#8592; Back</button>
+        ${this.buildParseWarningBanner()}
 
         <div class="detail-field">
           <label>Title</label>
@@ -883,6 +1004,23 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
       document.getElementById('aiBtn').addEventListener('click', () => {
         vscode.postMessage({ type: 'implementWithAi', taskId });
+      });
+
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="openParseWarningFile"], [data-action="dismissParseWarnings"]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'openParseWarningFile') {
+          e.preventDefault();
+          vscode.postMessage({
+            type: 'openParseWarningFile',
+            fileName: btn.dataset.fileName,
+            line: parseInt(btn.dataset.line ?? '1', 10),
+          });
+        } else if (action === 'dismissParseWarnings') {
+          e.preventDefault();
+          vscode.postMessage({ type: 'dismissParseWarnings' });
+        }
       });
     `;
 
@@ -1083,6 +1221,53 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           font-size: 0.75em;
           color: var(--muted-fg);
           text-align: right;
+        }
+        .parse-warning-banner {
+          border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-border));
+          background: var(--vscode-inputValidation-warningBackground, rgba(255, 204, 0, 0.12));
+          color: var(--vscode-editorWarning-foreground, var(--vscode-editorWarning-foreground));
+          border-radius: 4px;
+          padding: 8px 10px;
+          margin-bottom: 8px;
+          font-size: 0.85em;
+        }
+        .parse-warning-title {
+          font-weight: 600;
+          margin-bottom: 6px;
+          color: var(--vscode-editorWarning-foreground, var(--vscode-foreground));
+        }
+        .parse-warning-row {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 6px;
+          margin-bottom: 4px;
+        }
+        .parse-warning-file {
+          font-weight: 500;
+        }
+        .parse-warning-msg {
+          flex: 1;
+          min-width: 120px;
+          color: var(--muted-fg);
+        }
+        .parse-warning-open,
+        .parse-warning-dismiss {
+          background: var(--vscode-button-secondaryBackground);
+          color: var(--vscode-button-secondaryForeground);
+          border: none;
+          padding: 2px 10px;
+          border-radius: 3px;
+          cursor: pointer;
+          font-family: inherit;
+          font-size: inherit;
+        }
+        .parse-warning-open:hover,
+        .parse-warning-dismiss:hover {
+          background: var(--vscode-button-secondaryHoverBackground);
+        }
+        .parse-warning-dismiss {
+          margin-top: 6px;
         }
       </style>
     `;

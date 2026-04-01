@@ -1,6 +1,7 @@
 import { Task } from '../model/task.js';
 import { TaskState } from '../model/state.js';
 import { TaskPlannerConfig } from '../model/config.js';
+import { ParseWarning } from '../model/parseResult.js';
 import { ConfigManager } from '../config/configManager.js';
 import { FileStore } from './fileStore.js';
 import { IdGenerator } from '../id/idGenerator.js';
@@ -10,6 +11,7 @@ export type TaskStoreListener = () => void;
 
 export class TaskStore {
   private tasksByState: Map<string, Task[]> = new Map();
+  private parseWarningsByFile: Map<string, ParseWarning[]> = new Map();
   private listeners: TaskStoreListener[] = [];
   private fileStore: FileStore;
   private idGenerator: IdGenerator;
@@ -27,16 +29,36 @@ export class TaskStore {
   }
 
   reload(): void {
-    this.tasksByState = this.fileStore.readAllStates(this.config);
+    const parsed = this.fileStore.readAllStates(this.config);
+    this.tasksByState = new Map();
+    this.parseWarningsByFile = new Map();
+    for (const state of this.config.states) {
+      const pr = parsed.get(state.name) ?? { tasks: [], warnings: [] };
+      this.tasksByState.set(state.name, pr.tasks);
+      if (pr.warnings.length > 0) {
+        this.parseWarningsByFile.set(state.fileName, pr.warnings);
+      }
+    }
     this.notifyListeners();
   }
 
   reloadState(stateName: string): void {
     const state = this.findState(stateName);
     if (state) {
-      this.tasksByState.set(stateName, this.fileStore.readState(state));
+      const pr = this.fileStore.readState(state);
+      this.tasksByState.set(stateName, pr.tasks);
+      this.parseWarningsByFile.delete(state.fileName);
+      if (pr.warnings.length > 0) {
+        this.parseWarningsByFile.set(state.fileName, pr.warnings);
+      }
       this.notifyListeners();
     }
+  }
+
+  getWarnings(): { fileName: string; warnings: ParseWarning[] }[] {
+    return [...this.parseWarningsByFile.entries()]
+      .filter(([, w]) => w.length > 0)
+      .map(([fileName, warnings]) => ({ fileName, warnings }));
   }
 
   getTasksByState(stateName: string): Task[] {

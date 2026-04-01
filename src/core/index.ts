@@ -1,4 +1,5 @@
 export { Task, Priority, isPriority } from './model/task.js';
+export { ParseWarning, ParseResult } from './model/parseResult.js';
 export { TaskState, DEFAULT_STATES } from './model/state.js';
 export { TaskPlannerConfig, createDefaultConfig } from './model/config.js';
 export { ConfigManager } from './config/configManager.js';

@@ -1,5 +1,21 @@
 # Done
 
+## TASK-017: Invalid data notification and parser test coverage
+**Priority:** P1 | **Tags:** ui, testing, core
+**Updated:** 2026-04-01
+
+If a task or text cannot be parsed, display a notification banner at the top of the main screen. Add comprehensive tests for different markdown formats — both valid and malformed inputs.
+
+### Plan
+
+- Introduced `ParseResult` / `ParseWarning`; `parseTasks` returns tasks plus per-line warnings (orphan text, invalid `##` headings, empty titles, BOM strip, harmless `---` when no task open).
+- `FileStore` / `TaskStore` propagate warnings; `getWarnings()` grouped by state file for the UI.
+- Dismissible warning banner in sidebar task list (list + detail) and Kanban, with Open-at-line; dismiss resets when warning set changes.
+- File watcher logs reload failures to **TaskPlanner** output channel instead of swallowing errors.
+- Extended Vitest parser coverage: assignee/updated, round-trip serialize, malformed inputs, BOM, duplicates.
+
+---
+
 ## TASK-030: Cursor sidebar prompt integration
 **Priority:** P3 | **Tags:** feature, ui
 **Updated:** 2026-04-01 20:45

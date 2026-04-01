@@ -8,6 +8,7 @@ export function createFileWatcher(
   taskDirName: string,
   configManager: ConfigManager,
   taskStore: TaskStore,
+  logChannel?: vscode.OutputChannel,
 ): vscode.Disposable {
   const pattern = new vscode.RelativePattern(workspacePath, `${taskDirName}/*.md`);
   const watcher = vscode.workspace.createFileSystemWatcher(pattern);
@@ -23,8 +24,9 @@ export function createFileWatcher(
         configManager.get();
         taskStore.reload();
         await checkAndPromptDuplicateConflicts(taskStore, configManager);
-      } catch {
-        // Ignore parse errors from in-progress edits
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        logChannel?.appendLine(`[TaskPlanner] Reload failed after .tasks change: ${message}`);
       }
     }, 300);
   }

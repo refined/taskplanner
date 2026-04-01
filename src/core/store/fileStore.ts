@@ -3,16 +3,17 @@ import * as path from 'path';
 import { Task } from '../model/task.js';
 import { TaskState } from '../model/state.js';
 import { TaskPlannerConfig } from '../model/config.js';
+import { ParseResult } from '../model/parseResult.js';
 import { parseTasks } from '../parser/taskParser.js';
 import { serializeStateFile } from '../parser/taskSerializer.js';
 
 export class FileStore {
   constructor(private tasksDir: string) {}
 
-  readState(state: TaskState): Task[] {
+  readState(state: TaskState): ParseResult {
     const filePath = path.join(this.tasksDir, state.fileName);
     if (!fs.existsSync(filePath)) {
-      return [];
+      return { tasks: [], warnings: [] };
     }
     const content = fs.readFileSync(filePath, 'utf-8');
     return parseTasks(content);
@@ -24,8 +25,8 @@ export class FileStore {
     fs.writeFileSync(filePath, content, 'utf-8');
   }
 
-  readAllStates(config: TaskPlannerConfig): Map<string, Task[]> {
-    const result = new Map<string, Task[]>();
+  readAllStates(config: TaskPlannerConfig): Map<string, ParseResult> {
+    const result = new Map<string, ParseResult>();
     for (const state of config.states) {
       result.set(state.name, this.readState(state));
     }

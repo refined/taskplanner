@@ -49,6 +49,10 @@ export class ConfigManager {
     return this.config;
   }
 
+  getTasksDir(): string {
+    return this.tasksDir;
+  }
+
   update(partial: Partial<TaskPlannerConfig>): void {
     this.config = { ...this.config, ...partial };
   }

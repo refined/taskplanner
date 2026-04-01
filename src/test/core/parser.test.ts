@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { parseTasks, findTaskLineNumber } from '../../core/parser/taskParser.js';
+import { serializeStateFile } from '../../core/parser/taskSerializer.js';
 import { Priority } from '../../core/model/task.js';
+import type { Task } from '../../core/model/task.js';
 
 describe('parseTasks', () => {
   it('parses a single task', () => {
@@ -14,7 +16,7 @@ Build OAuth2 authentication.
 
 ---
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks).toHaveLength(1);
     expect(tasks[0]).toEqual({
       id: 'TASK-001',
@@ -24,6 +26,7 @@ Build OAuth2 authentication.
       epic: undefined,
       description: 'Build OAuth2 authentication.',
     });
+    expect(parseTasks(content).warnings).toHaveLength(0);
   });
 
   it('parses multiple tasks', () => {
@@ -45,7 +48,7 @@ Description two.
 
 ---
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks).toHaveLength(2);
     expect(tasks[0].id).toBe('TASK-001');
     expect(tasks[1].id).toBe('TASK-002');
@@ -64,7 +67,7 @@ Configure GitHub Actions.
 
 ---
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].epic).toBe('infrastructure');
   });
@@ -79,7 +82,7 @@ Just a simple task.
 
 ---
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].tags).toEqual([]);
     expect(tasks[0].priority).toBe(Priority.P4);
@@ -93,7 +96,7 @@ Just a simple task.
 
 ---
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].description).toBe('');
   });
@@ -108,7 +111,7 @@ Build OAuth2 authentication.
 
 ---
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks).toHaveLength(1);
     expect(tasks[0]).toEqual({
       id: 'TASK-001',
@@ -128,7 +131,7 @@ Configure GitHub Actions.
 
 ---
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].priority).toBe(Priority.P2);
     expect(tasks[0].tags).toEqual(['devops']);
@@ -136,13 +139,15 @@ Configure GitHub Actions.
   });
 
   it('handles empty file', () => {
-    const tasks = parseTasks('# Backlog\n');
+    const { tasks, warnings } = parseTasks('# Backlog\n');
     expect(tasks).toHaveLength(0);
+    expect(warnings).toHaveLength(0);
   });
 
   it('handles empty string', () => {
-    const tasks = parseTasks('');
+    const { tasks, warnings } = parseTasks('');
     expect(tasks).toHaveLength(0);
+    expect(warnings).toHaveLength(0);
   });
 
   it('defaults to P4 for unknown priority', () => {
@@ -151,7 +156,7 @@ Configure GitHub Actions.
 
 Some description.
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks[0].priority).toBe(Priority.P4);
   });
 
@@ -163,7 +168,7 @@ Some description.
 
 Description without trailing separator.
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].description).toBe('Description without trailing separator.');
   });
@@ -181,7 +186,7 @@ Description of the task.
 
 ---
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].description).toBe('Description of the task.');
     expect(tasks[0].plan).toBe('- Step 1: Do A\n- Step 2: Do B');
@@ -195,7 +200,7 @@ Just a description.
 
 ---
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].description).toBe('Just a description.');
     expect(tasks[0].plan).toBeUndefined();
@@ -213,10 +218,223 @@ Line two with **bold**.
 
 ---
 `;
-    const tasks = parseTasks(content);
+    const { tasks } = parseTasks(content);
     expect(tasks[0].description).toContain('Line one.');
     expect(tasks[0].description).toContain('Line two with **bold**.');
     expect(tasks[0].description).toContain('- List item');
+  });
+
+  it('parses **Assignee:**', () => {
+    const content = `## TASK-001: Owned
+**Priority:** P1
+**Assignee:** alice
+
+Work.
+
+---
+`;
+    const { tasks } = parseTasks(content);
+    expect(tasks[0].assignee).toBe('alice');
+  });
+
+  it('parses **Updated:**', () => {
+    const content = `## TASK-001: Recent
+**Priority:** P2
+**Updated:** 2026-03-22 19:14
+
+Done.
+
+---
+`;
+    const { tasks } = parseTasks(content);
+    expect(tasks[0].updatedAt).toBe('2026-03-22 19:14');
+  });
+
+  it('parses all metadata fields together', () => {
+    const content = `## TASK-001: Full meta
+**Priority:** P1
+**Tags:** a, b
+**Epic:** epic1
+**Assignee:** bob
+**Updated:** 2026-01-01 12:00
+
+Body.
+
+---
+`;
+    const { tasks } = parseTasks(content);
+    expect(tasks[0]).toMatchObject({
+      id: 'TASK-001',
+      title: 'Full meta',
+      priority: Priority.P1,
+      tags: ['a', 'b'],
+      epic: 'epic1',
+      assignee: 'bob',
+      updatedAt: '2026-01-01 12:00',
+      description: 'Body.',
+    });
+  });
+
+  it('parses pipe-separated line with assignee and updated', () => {
+    const content = `## TASK-001: Pipe
+**Priority:** P2 | **Assignee:** carol | **Updated:** 2026-02-02
+
+Text.
+
+---
+`;
+    const { tasks } = parseTasks(content);
+    expect(tasks[0].assignee).toBe('carol');
+    expect(tasks[0].updatedAt).toBe('2026-02-02');
+  });
+
+  it('round-trips serializeStateFile then parseTasks', () => {
+    const original: Task[] = [
+      {
+        id: 'TASK-001',
+        title: 'Round trip',
+        description: 'Desc line.',
+        priority: Priority.P2,
+        tags: ['x'],
+        epic: 'My Epic',
+        assignee: 'dev',
+        updatedAt: '2026-03-01 10:00',
+        plan: '- Step one',
+      },
+    ];
+    const md = serializeStateFile('Backlog', original);
+    const { tasks, warnings } = parseTasks(md);
+    expect(warnings).toHaveLength(0);
+    expect(tasks).toEqual(original);
+  });
+
+  it('duplicate **Priority:** lines — last value wins', () => {
+    const content = `## TASK-001: Dup priority
+**Priority:** P1
+**Priority:** P3
+
+---
+
+`;
+    const { tasks } = parseTasks(content);
+    expect(tasks[0].priority).toBe(Priority.P3);
+  });
+
+  it('parses two consecutive headings without intermediate body (both tasks)', () => {
+    const content = `## TASK-001: First
+## TASK-002: Second
+**Priority:** P1
+
+Only second has metadata block.
+
+---
+`;
+    const { tasks } = parseTasks(content);
+    expect(tasks).toHaveLength(2);
+    expect(tasks[0]).toMatchObject({ id: 'TASK-001', title: 'First', priority: Priority.P4 });
+    expect(tasks[1]).toMatchObject({ id: 'TASK-002', title: 'Second', priority: Priority.P1 });
+  });
+
+  it('very long single-line description produces no warnings', () => {
+    const long = 'x'.repeat(8000);
+    const content = `## TASK-001: Long
+**Priority:** P1
+
+${long}
+`;
+    const { tasks, warnings } = parseTasks(content);
+    expect(warnings).toHaveLength(0);
+    expect(tasks[0].description).toBe(long);
+  });
+});
+
+describe('parseTasks malformed input', () => {
+  it('warns on random text without task headings', () => {
+    const { tasks, warnings } = parseTasks('not a task\nstill garbage\n');
+    expect(tasks).toHaveLength(0);
+    expect(warnings.length).toBeGreaterThanOrEqual(2);
+    expect(warnings[0].line).toBe(1);
+  });
+
+  it('warns on ## line that is not a valid task heading', () => {
+    const { tasks, warnings } = parseTasks('## TASK-001 Missing colon syntax\n');
+    expect(tasks).toHaveLength(0);
+    expect(warnings.some((w) => w.message.includes('Invalid task heading'))).toBe(true);
+  });
+
+  it('warns on lowercase id prefix', () => {
+    const { tasks, warnings } = parseTasks('## task-001: lower\n');
+    expect(tasks).toHaveLength(0);
+    expect(warnings.some((w) => w.message.includes('Invalid task heading'))).toBe(true);
+  });
+
+  it('warns on task heading with only whitespace as title', () => {
+    const { tasks, warnings } = parseTasks('## TASK-001:     \n');
+    expect(tasks).toHaveLength(0);
+    expect(warnings.some((w) => w.message.includes('no title'))).toBe(true);
+  });
+
+  it('warns on orphaned content between tasks', () => {
+    const content = `## TASK-001: A
+**Priority:** P1
+
+---
+
+this is orphaned
+
+## TASK-002: B
+**Priority:** P2
+
+---
+
+`;
+    const { tasks, warnings } = parseTasks(content);
+    expect(tasks).toHaveLength(2);
+    expect(warnings.some((w) => w.message.includes('not part of any task'))).toBe(true);
+  });
+
+  it('parses valid tasks and warns on invalid heading in between', () => {
+    const content = `## TASK-001: Good
+**Priority:** P1
+
+---
+
+## not a valid task heading
+
+## TASK-002: Also good
+**Priority:** P2
+
+---
+
+`;
+    const { tasks, warnings } = parseTasks(content);
+    expect(tasks).toHaveLength(2);
+    expect(
+      warnings.some(
+        (w) => w.message.includes('Invalid task heading') || w.message.includes('not part of any task'),
+      ),
+    ).toBe(true);
+  });
+
+  it('allows file with only separators and no tasks', () => {
+    const { tasks, warnings } = parseTasks('---\n\n---\n');
+    expect(tasks).toHaveLength(0);
+    expect(warnings).toHaveLength(0);
+  });
+
+  it('strips BOM and parses normally', () => {
+    const content = `\uFEFF# Backlog
+
+## TASK-001: BOM
+**Priority:** P1
+
+---
+
+`;
+    const { tasks, warnings } = parseTasks(content);
+    expect(warnings).toHaveLength(0);
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0].id).toBe('TASK-001');
   });
 });
 
