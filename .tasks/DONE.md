@@ -1,5 +1,19 @@
 # Done
 
+## TASK-032: AI workflow onboarding — activation prompt and stronger instructions (Phase 1)
+**Priority:** P2 | **Tags:** feature, setup
+**Updated:** 2026-04-01
+
+When a workspace has `.tasks/` but root AI files lack TaskPlanner marker sections, prompt (per workspace, dismissible) to run **Initialize AI Instructions**. Strengthen `generateAiInstructions` output: mandatory **In Progress → Done** steps and a short **### Plan** guideline. Defer later phases (e.g. versioned post-update nudge, MCP tools).
+
+### Plan
+
+- **`scheduleAiInstructionSyncPrompt`** on activate when `.tasks/config.json` exists: if neither `CLAUDE.md` nor `.cursorrules` contains `MARKER_START`, show **InformationMessage** with **Sync AI Instructions** / **Don't show again** / **Later**; workspace state key suppresses repeat.
+- **`contentHasTaskPlannerMarkers`** in `aiInstructions.ts` for detection; Vitest coverage.
+- **`buildInstructionContent`:** short-plan guidance (3–7 bullets); new **Mandatory checklist** section (move to In Progress before coding, Done + CHANGELOG after, plan timing).
+
+---
+
 ## TASK-031: Make tasks draggable in the basic Task list view
 **Priority:** P2 | **Tags:** ui, feature
 **Updated:** 2026-04-01

@@ -5,6 +5,11 @@ const MARKER_END = '<!-- TASKPLANNER:END -->';
 
 export { MARKER_START, MARKER_END };
 
+/** True if synced TaskPlanner AI block is present (e.g. after Initialize AI Instructions). */
+export function contentHasTaskPlannerMarkers(content: string): boolean {
+  return content.includes(MARKER_START);
+}
+
 export interface AiInstructions {
   claudeMd: string;
   cursorRules: string;
@@ -45,7 +50,9 @@ Description of the task.
 - Key files: ...
 \`\`\`
 
-The plan is free-form markdown. Write it before you start coding.
+Keep the plan **short** (about 3–7 bullets): intended changes, key files or modules, and notable risks or edge cases. Expand only when the task is large.
+
+The plan is free-form markdown. Write it **before** you start coding.
 
 ### Plan Persistence
 
@@ -87,6 +94,14 @@ When asked to implement a task:
 ${config.aiPlanRequired ? '4' : '3'}. **Implement** the task.
 ${config.aiPlanRequired ? '5' : '4'}. **Move the task** to DONE.md when complete.
 ${planSection}
+
+## Mandatory checklist (do not skip)
+
+These steps are **part of the work**, not optional housekeeping:
+
+- **In Progress:** You must **physically move** the task markdown (the whole \`##\` section and its \`---\`) from BACKLOG/NEXT into **IN_PROGRESS.md** before substantive implementation — not only describe that you will.
+- **Done:** When the implementation is finished, **move** the same task section from IN_PROGRESS.md into **DONE.md** and add a **CHANGELOG.md** entry under \`## [Unreleased]\` if the project uses this changelog rule.
+- **Plan:** If this project requires a plan (${config.aiPlanRequired ? '**yes for this project** — see above' : 'check the **aiPlanRequired** field in .tasks/config.json'}), the \`### Plan\` block must exist in IN_PROGRESS **before** coding, and should be **trimmed to a short done-summary** when you move the task to DONE.
 
 ## Git Branching
 

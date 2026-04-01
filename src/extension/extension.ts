@@ -21,6 +21,7 @@ import {
 import { createFileWatcher } from './watchers/fileWatcher.js';
 import { TaskListViewProvider } from './views/webview/taskListPanel.js';
 import { KanbanPanel } from './views/webview/kanbanPanel.js';
+import { scheduleAiInstructionSyncPrompt } from './aiInstructionSyncPrompt.js';
 
 export function activate(context: vscode.ExtensionContext) {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -44,6 +45,7 @@ export function activate(context: vscode.ExtensionContext) {
     configManager.load();
     taskStore.reload();
     void checkAndPromptDuplicateConflicts(taskStore, configManager);
+    scheduleAiInstructionSyncPrompt(context, workspaceFolder.uri.fsPath, tasksDir);
   }
 
   // Sidebar webview view

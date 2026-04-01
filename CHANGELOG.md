@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Prompt to **Initialize AI Instructions** on activation when the workspace has `.tasks/` but neither `CLAUDE.md` nor `.cursorrules` contains the TaskPlanner marker block; dismissible per workspace (TASK-032)
+- Stronger generated AI workflow text: mandatory In Progress → Done checklist, CHANGELOG reminder, and short **### Plan** guidance (TASK-032)
 - Sidebar task list: drag-and-drop reorder and cross-state moves when grouped by **Status** (Kanban-style feedback); drop on **folded** group headers; optional **File order** sort so order matches markdown (TASK-031)
 - Parse warnings for malformed task markdown: dismissible banner in the task list and Kanban with jump-to-file; reload errors log to the **TaskPlanner** output channel (TASK-017)
 - Cursor Tier 1 chat failure logs to **TaskPlanner AI** output and shows a warning before the Agent Chat paste fallback (TASK-030)
