@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `taskplanner.aiTool` setting to choose preferred AI tool (window-scoped; includes auto/cursor/claude-code/vscode-chat/claude-cli/clipboard) (TASK-026)
 - Changelog for VS Code marketplace with retrospective entries and auto-update rule in CLAUDE.md (TASK-029)
 
+### Fixed
+
+- Task detail **Status** and **Priority** pickers use theme-colored popup menus instead of native `<select>` lists, so options stay readable in dark themes and match VS Code styling.
+
 ### Changed
 
 - Claude Code integration simplified to URI handler — removed intermediate QuickPick menu (TASK-026)

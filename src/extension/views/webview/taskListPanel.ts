@@ -672,12 +672,18 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
   private buildDetailHtml(task: Task, stateName: string): string {
     const states = this.configManager.get().states;
-    const stateOptions = states
-      .map((s) => `<option value="${s.name}"${s.name === stateName ? ' selected' : ''}>${s.name}</option>`)
+    const stateItems = states
+      .map(
+        (s) =>
+          `<div class="popup-item${s.name === stateName ? ' active' : ''}" data-value="${this.escapeAttr(s.name)}">${this.escapeHtml(s.name)}</div>`,
+      )
       .join('\n');
 
-    const priorityOptions = Object.values(Priority)
-      .map((p) => `<option value="${p}"${p === task.priority ? ' selected' : ''}>${p}</option>`)
+    const priorityItems = Object.values(Priority)
+      .map(
+        (p) =>
+          `<div class="popup-item${p === task.priority ? ' active' : ''}" data-value="${p}">${p}</div>`,
+      )
       .join('\n');
 
     const descriptionText = this.escapeHtml(task.description);
@@ -694,11 +700,25 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         <div class="detail-row">
           <div class="detail-field detail-field-half">
             <label>Status</label>
-            <select id="fieldStatus">${stateOptions}</select>
+            <div class="detail-select-wrap">
+              <button type="button" class="detail-select-trigger" id="fieldStatusTrigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="detail-select-label">${this.escapeHtml(stateName)}</span>
+                <span class="detail-select-chevron" aria-hidden="true">▾</span>
+              </button>
+              <input type="hidden" id="fieldStatus" value="${this.escapeAttr(stateName)}" />
+              <div class="popup-menu detail-select-menu" id="fieldStatusMenu" role="listbox">${stateItems}</div>
+            </div>
           </div>
           <div class="detail-field detail-field-half">
             <label>Priority</label>
-            <select id="fieldPriority">${priorityOptions}</select>
+            <div class="detail-select-wrap">
+              <button type="button" class="detail-select-trigger" id="fieldPriorityTrigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="detail-select-label">${task.priority}</span>
+                <span class="detail-select-chevron" aria-hidden="true">▾</span>
+              </button>
+              <input type="hidden" id="fieldPriority" value="${task.priority}" />
+              <div class="popup-menu detail-select-menu" id="fieldPriorityMenu" role="listbox">${priorityItems}</div>
+            </div>
           </div>
         </div>
 
@@ -803,10 +823,50 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         document.getElementById(id).addEventListener('input', debouncedSave);
       });
 
-      document.getElementById('fieldPriority').addEventListener('change', () => saveNow());
+      function closeAllDetailMenus() {
+        document.querySelectorAll('.detail-select-menu.open').forEach((m) => m.classList.remove('open'));
+        document.querySelectorAll('.detail-select-trigger').forEach((t) => t.setAttribute('aria-expanded', 'false'));
+      }
 
-      document.getElementById('fieldStatus').addEventListener('change', (e) => {
-        vscode.postMessage({ type: 'changeStatus', taskId, targetState: e.target.value });
+      function setupDetailSelect(triggerId, menuId, hiddenId, onPick) {
+        const trigger = document.getElementById(triggerId);
+        const menu = document.getElementById(menuId);
+        const hidden = document.getElementById(hiddenId);
+        const labelEl = trigger.querySelector('.detail-select-label');
+
+        trigger.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = menu.classList.contains('open');
+          closeAllDetailMenus();
+          if (!isOpen) {
+            menu.classList.add('open');
+            trigger.setAttribute('aria-expanded', 'true');
+          }
+        });
+
+        menu.querySelectorAll('.popup-item').forEach((item) => {
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const val = item.dataset.value;
+            hidden.value = val;
+            labelEl.textContent = val;
+            menu.querySelectorAll('.popup-item').forEach((i) => {
+              i.classList.toggle('active', i.dataset.value === val);
+            });
+            closeAllDetailMenus();
+            onPick(val);
+          });
+        });
+      }
+
+      document.addEventListener('click', () => closeAllDetailMenus());
+
+      setupDetailSelect('fieldStatusTrigger', 'fieldStatusMenu', 'fieldStatus', (val) => {
+        vscode.postMessage({ type: 'changeStatus', taskId, targetState: val });
+      });
+
+      setupDetailSelect('fieldPriorityTrigger', 'fieldPriorityMenu', 'fieldPriority', () => {
+        saveNow();
       });
 
       // Back always works — fields are auto-saved
@@ -907,6 +967,78 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         .detail-field-half {
           flex: 1;
           min-width: 0;
+        }
+        .detail-select-wrap {
+          position: relative;
+          width: 100%;
+        }
+        .detail-select-trigger {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          background: var(--vscode-dropdown-background);
+          color: var(--vscode-dropdown-foreground, var(--vscode-foreground));
+          border: 1px solid var(--vscode-dropdown-border, var(--vscode-input-border, var(--card-border)));
+          padding: 4px 8px;
+          border-radius: 3px;
+          font-family: inherit;
+          font-size: inherit;
+          cursor: pointer;
+          text-align: left;
+        }
+        .detail-select-trigger:hover {
+          background: var(--vscode-list-hoverBackground);
+        }
+        .detail-select-trigger:focus-visible {
+          outline: 1px solid var(--accent);
+        }
+        .detail-select-label {
+          flex: 1;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .detail-select-chevron {
+          flex-shrink: 0;
+          opacity: 0.7;
+          font-size: 0.85em;
+        }
+        .popup-menu {
+          display: none;
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          right: 0;
+          z-index: 1000;
+          background: var(--vscode-dropdown-background);
+          color: var(--vscode-dropdown-foreground, var(--vscode-foreground));
+          border: 1px solid var(--vscode-dropdown-border, var(--vscode-input-border, var(--card-border)));
+          border-radius: 4px;
+          padding: 4px 0;
+          font-family: inherit;
+          font-size: inherit;
+          box-shadow: var(--vscode-widget-shadow, none);
+        }
+        .popup-menu.open {
+          display: block;
+        }
+        .popup-item {
+          padding: 4px 10px;
+          cursor: pointer;
+          white-space: nowrap;
+          font-family: inherit;
+          font-size: inherit;
+        }
+        .popup-item:hover {
+          background: var(--vscode-list-hoverBackground);
+        }
+        .popup-item.active {
+          font-weight: 600;
+          background: var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground));
+          color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
         }
         .detail-meta {
           font-size: 0.8em;
