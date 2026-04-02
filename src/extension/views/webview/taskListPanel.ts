@@ -1037,6 +1037,8 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         <button class="back-btn" id="backBtn">&#8592; Back</button>
         ${this.buildParseWarningBanner()}
 
+        <button class="ai-hero-btn" id="aiBtnTop"><svg width="16" height="16" viewBox="0 0 16 16" style="vertical-align:-3px;margin-right:6px"><path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5Z" fill="#fff"/><path d="M12.5 0l.75 2.25L15.5 3l-2.25.75L12.5 6l-.75-2.25L9.5 3l2.25-.75Z" fill="#fff" opacity="0.7"/></svg>Build with AI</button>
+
         <div class="detail-field">
           <label>Title</label>
           <input type="text" id="fieldTitle" value="${this.escapeAttr(task.title)}" />
@@ -1091,8 +1093,8 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         ${task.updatedAt ? `<div class="detail-meta">Updated: ${this.escapeHtml(task.updatedAt)}</div>` : ''}
 
         <div class="detail-actions">
-          <button class="ai-btn" id="aiBtn"><svg width="14" height="14" viewBox="0 0 16 16" style="vertical-align:-2px;margin-right:4px"><path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5Z" fill="#fff"/><path d="M12.5 0l.75 2.25L15.5 3l-2.25.75L12.5 6l-.75-2.25L9.5 3l2.25-.75Z" fill="#fff" opacity="0.7"/></svg>Implement with AI</button>
-          <button class="editor-btn" id="editorBtn">Open in Editor</button>
+          <button class="editor-btn" id="backBtnBottom">Back</button>
+          <button class="editor-btn" id="editorBtn">Locate in File</button>
         </div>
 
         <div class="detail-id">${this.escapeHtml(task.id)}</div>
@@ -1226,8 +1228,13 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ type: 'openInEditor', taskId });
       });
 
-      document.getElementById('aiBtn').addEventListener('click', () => {
+      document.getElementById('aiBtnTop').addEventListener('click', () => {
         vscode.postMessage({ type: 'implementWithAi', taskId });
+      });
+
+      document.getElementById('backBtnBottom').addEventListener('click', () => {
+        saveNow();
+        vscode.postMessage({ type: 'backToList' });
       });
 
       document.addEventListener('click', (e) => {
@@ -1413,25 +1420,29 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           padding-top: 4px;
           border-top: 1px solid var(--card-border);
         }
-        .ai-btn {
+        .ai-hero-btn {
           background: linear-gradient(135deg, #ec4899, #8b5cf6);
           color: #ffffff;
           border: none;
-          padding: 5px 14px;
-          border-radius: 3px;
+          padding: 8px 18px;
+          border-radius: 4px;
           cursor: pointer;
           font-family: inherit;
-          font-size: 0.85em;
+          font-size: 0.95em;
+          font-weight: 600;
           display: inline-flex;
           align-items: center;
+          width: 100%;
+          justify-content: center;
+          margin-bottom: 4px;
         }
-        .ai-btn:hover {
+        .ai-hero-btn:hover {
           background: linear-gradient(135deg, #db2777, #7c3aed);
         }
         .editor-btn {
-          background: var(--vscode-button-secondaryBackground);
-          color: var(--vscode-button-secondaryForeground);
-          border: none;
+          background: #3c3c3c;
+          color: #cccccc;
+          border: 1px solid #555;
           padding: 5px 14px;
           border-radius: 3px;
           cursor: pointer;
@@ -1439,7 +1450,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           font-size: 0.85em;
         }
         .editor-btn:hover {
-          background: var(--vscode-button-secondaryHoverBackground);
+          background: #4a4a4a;
         }
         .detail-id {
           font-size: 0.75em;

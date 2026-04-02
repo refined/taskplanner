@@ -6,18 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-04-02
+
 ### Added
-- Prompt to **Initialize AI Instructions** on activation when the workspace has `.tasks/` but neither `CLAUDE.md` nor `.cursorrules` contains the TaskPlanner marker block; dismissible per workspace (TASK-032)
-- Stronger generated AI workflow text: mandatory In Progress → Done checklist, CHANGELOG reminder, and short **### Plan** guidance (TASK-032)
+
+- **(Beta)** Prompt to **Initialize AI Instructions** on activation when the workspace has `.tasks/` but neither `CLAUDE.md` nor `.cursorrules` contains the TaskPlanner marker block; dismissible per workspace (TASK-032)
+- **(Beta)** Stronger generated AI workflow text: mandatory In Progress → Done checklist, CHANGELOG reminder, and short **### Plan** guidance (TASK-032)
 - Sidebar task list: drag-and-drop reorder and cross-state moves when grouped by **Status** (Kanban-style feedback); drop on **folded** group headers; optional **File order** sort so order matches markdown (TASK-031)
 - Parse warnings for malformed task markdown: dismissible banner in the task list and Kanban with jump-to-file; reload errors log to the **TaskPlanner** output channel (TASK-017)
-- Cursor Tier 1 chat failure logs to **TaskPlanner AI** output and shows a warning before the Agent Chat paste fallback (TASK-030)
-- Optional `taskplanner.cursorPlanAndSubmitAfterOpen` — after Cursor Tier 1 succeeds, best-effort plan/submit commands (TASK-030)
-- AI providers for **Implement with AI**: `vscode-chat`, `claude-cli` (terminal + `taskplanner.claudeCliCommand`, default `claude {{file}}`); optional first-run prompt and **TaskPlanner: Configure AI Provider** command (TASK-030)
-- Cursor "Implement with AI" uses tiered delivery: native chat open, then Agent Chat paste workaround, then clipboard (TASK-030)
-- AI prompts include a plan-mode instruction when project config requires an agent plan (TASK-030)
-- "Implement with AI" button on task detail view and kanban cards — auto-detects Cursor or Claude Code, with clipboard fallback (TASK-026)
-- `taskplanner.aiTool` setting to choose preferred AI tool (window-scoped; includes auto/cursor/claude-code/vscode-chat/claude-cli/clipboard) (TASK-026)
+- **(Beta)** Cursor Tier 1 chat failure logs to **TaskPlanner AI** output and shows a warning before the Agent Chat paste fallback (TASK-030)
+- **(Beta)** Optional `taskplanner.cursorPlanAndSubmitAfterOpen` — after Cursor Tier 1 succeeds, best-effort plan/submit commands (TASK-030)
+- **(Beta)** AI providers for **Implement with AI**: `vscode-chat`, `claude-cli` (terminal + `taskplanner.claudeCliCommand`, default `claude {{file}}`); optional first-run prompt and **TaskPlanner: Configure AI Provider** command (TASK-030)
+- **(Beta)** Cursor "Implement with AI" uses tiered delivery: native chat open, then Agent Chat paste workaround, then clipboard (TASK-030)
+- **(Beta)** AI prompts include a plan-mode instruction when project config requires an agent plan (TASK-030)
+- **(Beta)** "Implement with AI" button on task detail view and kanban cards — auto-detects Cursor or Claude Code, with clipboard fallback (TASK-026)
+- **(Beta)** `taskplanner.aiTool` setting to choose preferred AI tool (window-scoped; includes auto/cursor/claude-code/vscode-chat/claude-cli/clipboard) (TASK-026)
 - Changelog for VS Code marketplace with retrospective entries and auto-update rule in CLAUDE.md (TASK-029)
 
 ### Fixed
@@ -26,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Claude Code integration simplified to URI handler — removed intermediate QuickPick menu (TASK-026)
+- **(Beta)** Claude Code integration simplified to URI handler — removed intermediate QuickPick menu (TASK-026)
 
 ## [1.2.0] - 2026-03-22
 

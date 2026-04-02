@@ -26,7 +26,8 @@ AI-directed markdown task tracking built for AI-assisted development. Tasks live
 - **Assignee & timestamps** — track who owns each task and when it was last updated
 - **AI instruction generation** — auto-generates `CLAUDE.md` and `.cursorrules` that teach agents your task workflow
 - **AI planning mode** — agents write a `### Plan` inside the task before coding; the plan is preserved when moving to Done
-- **Implement with AI** — sends a composed prompt to Cursor, Claude Code, VS Code Chat, the Claude CLI (terminal), or clipboard; configure via Settings (`taskplanner.aiTool`) or **TaskPlanner: Configure AI Provider**
+- **Implement with AI** **(Beta)** — sends a composed prompt to Cursor, Claude Code, VS Code Chat, the Claude CLI (terminal), or clipboard; configure via Settings (`taskplanner.aiTool`) or **TaskPlanner: Configure AI Provider**
+- **Parse warnings** — malformed task markdown triggers a dismissible banner with jump-to-file; errors log to the **TaskPlanner** output channel
 - **Live file watcher** — edit `.tasks/*.md` by hand and all views update instantly
 - **Configurable** — custom states, priorities (P0–P4), tags, ID prefix, sort order
 
@@ -173,7 +174,7 @@ Click the **gear icon** in the TaskPlanner sidebar title bar:
 - **Initialize Project** — create `.tasks/` folder and state files
 - **Initialize AI Instructions** — generate/update `CLAUDE.md` and `.cursorrules`
 - **AI Planning: Enable/Disable** — toggle whether agents must plan before coding
-- **Sort By** — change task sort order (Priority / Name / ID)
+- **Sort By** — change task sort order (Priority / Name / ID / File order)
 - **Open Settings** — open VS Code extension settings
 
 ## Settings
@@ -184,8 +185,11 @@ Extension settings (accessible via VS Code Settings UI):
 |---------|---------|-------------|
 | `taskplanner.taskDirectory` | `.tasks` | Directory for task files relative to workspace root |
 | `taskplanner.autoInitAiFiles` | `true` | Auto-create/update AI instruction files on init |
-| `taskplanner.sortBy` | `priority` | Sort order for tasks: `priority`, `name`, or `id` |
+| `taskplanner.sortBy` | `priority` | Sort order for tasks: `priority`, `name`, `id`, or `file` (markdown order) |
 | `taskplanner.groupBy` | `status` | Group tasks by: `status`, `assignee`, `date`, or `none` |
+| `taskplanner.aiTool` **(Beta)** | `auto` | AI tool for "Implement with AI": `auto`, `cursor`, `claude-code`, `vscode-chat`, `claude-cli`, `clipboard` |
+| `taskplanner.cursorPlanAndSubmitAfterOpen` **(Beta)** | `false` | Cursor: after chat.open succeeds, best-effort plan/submit commands |
+| `taskplanner.claudeCliCommand` **(Beta)** | `claude {{file}}` | claude-cli: shell command; `{{file}}` is replaced with temp prompt path |
 
 Project config is stored in `.tasks/config.json`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full config reference.
 
