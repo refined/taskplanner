@@ -103,17 +103,6 @@ These steps are **part of the work**, not optional housekeeping:
 - **Done:** When the implementation is finished, **move** the same task section from IN_PROGRESS.md into **DONE.md** and add a **CHANGELOG.md** entry under \`## [Unreleased]\` if the project uses this changelog rule.
 - **Plan:** If this project requires a plan (${config.aiPlanRequired ? '**yes for this project** — see above' : 'check the **aiPlanRequired** field in .tasks/config.json'}), the \`### Plan\` block must exist in IN_PROGRESS **before** coding, and should be **trimmed to a short done-summary** when you move the task to DONE.
 
-## Git Branching
-
-When creating a branch for a task, use this naming pattern:
-
-\`<type>/${config.idPrefix}-NNN-short-description\`
-
-- **type** — \`feature\` for new features or \`bug\` for bug fixes
-- **${config.idPrefix}-NNN** — the task ID
-
-Examples: \`feature/${config.idPrefix}-028-kanban-search\`, \`bug/${config.idPrefix}-012-fix-parser-edge-case\`
-
 ## Creating a New Task
 
 When the user asks you to create a task:

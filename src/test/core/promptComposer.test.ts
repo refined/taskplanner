@@ -50,7 +50,7 @@ describe('composeImplementationPrompt', () => {
 
   it('includes workflow steps with plan requirement', () => {
     const result = composeImplementationPrompt(makeTask(), 'Next', config);
-    expect(result).toContain('Create a git branch: feature/TASK-026-');
+    expect(result).not.toContain('git branch');
     expect(result).toContain('Move the task from Next to In Progress');
     expect(result).toContain('Write a ### Plan subsection');
     expect(result).toContain('Move the task to DONE.md');
@@ -67,12 +67,6 @@ describe('composeImplementationPrompt', () => {
     const task = makeTask({ assignee: 'Fedor' });
     const result = composeImplementationPrompt(task, 'Next', config);
     expect(result).toContain('Assignee: Fedor');
-  });
-
-  it('generates slug from title for branch name', () => {
-    const task = makeTask({ title: 'Fix parser edge-case' });
-    const result = composeImplementationPrompt(task, 'Next', config);
-    expect(result).toContain('feature/TASK-026-fix-parser-edge-case');
   });
 
   it('includes status in metadata', () => {

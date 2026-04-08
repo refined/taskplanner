@@ -12,12 +12,6 @@ export function composeImplementationPrompt(
   if (task.assignee) meta.push(`Assignee: ${task.assignee}`);
   meta.push(`Status: ${stateName}`);
 
-  const slugTitle = task.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .slice(0, 40);
-
   const lines: string[] = [];
 
   if (config.aiPlanRequired) {
@@ -41,17 +35,16 @@ export function composeImplementationPrompt(
 
   lines.push(
     'Workflow:',
-    `1. Create a git branch: feature/${task.id}-${slugTitle}`,
-    `2. Move the task from ${stateName} to In Progress (cut from source .tasks/ file, paste into IN_PROGRESS.md)`,
+    `1. Move the task from ${stateName} to In Progress (cut from source .tasks/ file, paste into IN_PROGRESS.md)`,
   );
 
   if (config.aiPlanRequired) {
-    lines.push('3. Write a ### Plan subsection under the task heading before coding');
-    lines.push('4. Implement the task');
-    lines.push('5. Move the task to DONE.md when complete');
-  } else {
+    lines.push('2. Write a ### Plan subsection under the task heading before coding');
     lines.push('3. Implement the task');
     lines.push('4. Move the task to DONE.md when complete');
+  } else {
+    lines.push('2. Implement the task');
+    lines.push('3. Move the task to DONE.md when complete');
   }
 
   lines.push('', 'Refer to .tasks/config.json and CLAUDE.md for project conventions.');

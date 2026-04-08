@@ -47,14 +47,6 @@ Description text in markdown.
 ---
 ```
 
-## Git Branching
-
-Branch names must follow the pattern: `<type>/TASK-NNN-short-description`
-- **type** is `feature` or `bug`
-- **TASK-NNN** is the task ID (uppercase, matching the ID prefix from config)
-
-Examples: `feature/TASK-028-kanban-search`, `bug/TASK-012-fix-parser-edge-case`.
-
 ## Changelog
 
 When you move a task to **Done**, add an entry to `CHANGELOG.md` under the `## [Unreleased]` section. Use the appropriate subsection (`Added`, `Changed`, `Fixed`, `Removed`) and reference the task ID. Keep entries concise — one line per change, written from the user's perspective.
@@ -139,17 +131,6 @@ These steps are **part of the work**, not optional housekeeping:
 - **In Progress:** You must **physically move** the task markdown (the whole `##` section and its `---`) from BACKLOG/NEXT into **IN_PROGRESS.md** before substantive implementation — not only describe that you will.
 - **Done:** When the implementation is finished, **move** the same task section from IN_PROGRESS.md into **DONE.md** and add a **CHANGELOG.md** entry under `## [Unreleased]` if the project uses this changelog rule.
 - **Plan:** If this project requires a plan (**yes for this project** — see above), the `### Plan` block must exist in IN_PROGRESS **before** coding, and should be **trimmed to a short done-summary** when you move the task to DONE.
-
-## Git Branching
-
-When creating a branch for a task, use this naming pattern:
-
-`<type>/TASK-NNN-short-description`
-
-- **type** — `feature` for new features or `bug` for bug fixes
-- **TASK-NNN** — the task ID
-
-Examples: `feature/TASK-028-kanban-search`, `bug/TASK-012-fix-parser-edge-case`
 
 ## Creating a New Task
 
