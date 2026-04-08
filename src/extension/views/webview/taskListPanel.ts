@@ -14,7 +14,7 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
   private filter: TaskFilter = { groupBy: 'status' };
   private sortBy: TaskListSortBy = 'priority';
   private showAllForGroup: Set<string> = new Set();
-  private expandedGroups: Set<string> = new Set();
+  private toggledGroups: Set<string> = new Set();
   private activeTaskId: string | null = null;
   private storeDisposable?: { dispose: () => void };
   private parseWarningsDismissed = false;
@@ -132,17 +132,22 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       case 'toggleGroup':
         {
           const label = msg.groupLabel as string;
-          if (this.expandedGroups.has(label)) {
-            this.expandedGroups.delete(label);
+          if (this.toggledGroups.has(label)) {
+            this.toggledGroups.delete(label);
           } else {
-            this.expandedGroups.add(label);
+            this.toggledGroups.add(label);
           }
         }
         this.update();
         break;
       case 'expandGroup':
         if (msg.groupLabel) {
-          this.expandedGroups.add(msg.groupLabel as string);
+          const label = msg.groupLabel as string;
+          if (this.toggledGroups.has(label)) {
+            this.toggledGroups.delete(label);
+          } else {
+            this.toggledGroups.add(label);
+          }
         }
         this.update();
         break;
@@ -942,8 +947,8 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
   }
 
   private buildGroupSection(group: GroupViewData, groupBy: string): string {
-    const isCollapsedByDefault = group.collapsed && !this.expandedGroups.has(group.label);
-    const isHidden = isCollapsedByDefault && !this.filter.query;
+    const userToggled = this.toggledGroups.has(group.label);
+    const isHidden = !!group.collapsed !== userToggled && !this.filter.query;
     const chevronClass = isHidden ? 'group-chevron collapsed' : 'group-chevron';
     const tasksClass = isHidden ? 'group-tasks hidden' : 'group-tasks';
     const dndByStatus = groupBy === 'status';
