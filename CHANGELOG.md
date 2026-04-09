@@ -6,10 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-04-09
+
+### Added
+
+- **(Beta)** Cursor plugin bundled with the extension: MCP server (stdio) with task-oriented tools, slash commands `/list-tasks`, `/next-task`, `/continue-task`, a TaskPlanner **skill**, and a workflow **rule**; intended for agent use alongside `.tasks/` (see `cursor-plugin/README.md`).
+
 ### Changed
 
 - Large **Done** / **Rejected** files: heading-only counts on load, full parse when you expand those groups, use **Show all**, open the Kanban completed section, or when a command needs those tasks; reload uses async I/O. Scalability timing tests added (TASK-024).
 - Generated AI instructions (`Initialize AI Instructions`) and **Implement with AI** prompts no longer tell agents to create a git branch; branching remains optional for the user.
+- Activity bar, sidebar views, and settings section title use **Task → Plan → AI** (arrow styling) instead of **Task. Plan. AI.**
+
+### Fixed
+
+- Sidebar task list: **Next** group could not be collapsed in some cases.
 
 ## [1.3.0] - 2026-04-02
 
