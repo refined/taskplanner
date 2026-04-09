@@ -1,0 +1,334 @@
+import * as path from 'path';
+import * as fs from 'fs';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
+import { ConfigManager } from '../core/config/configManager.js';
+import { FileStore } from '../core/store/fileStore.js';
+import { TaskStore } from '../core/store/taskStore.js';
+import { Task, Priority, isPriority } from '../core/model/task.js';
+
+function findTasksDir(): string {
+  const cwd = process.cwd();
+  const defaultDir = path.join(cwd, '.tasks');
+  if (fs.existsSync(defaultDir)) {
+    return defaultDir;
+  }
+  throw new Error(
+    `No .tasks/ directory found in ${cwd}. ` +
+      'Run "TaskPlanner: Initialize Project" first.',
+  );
+}
+
+function freshStore(): { taskStore: TaskStore; configManager: ConfigManager } {
+  const tasksDir = findTasksDir();
+  const configManager = new ConfigManager(tasksDir);
+  configManager.load();
+  const fileStore = new FileStore(tasksDir);
+  const taskStore = new TaskStore(configManager, fileStore);
+  taskStore.reload();
+  return { taskStore, configManager };
+}
+
+function formatTask(task: Task, stateName: string): string {
+  const lines: string[] = [];
+  lines.push(`## ${task.id}: ${task.title}`);
+  const meta: string[] = [`Priority: ${task.priority}`, `Status: ${stateName}`];
+  if (task.tags.length > 0) meta.push(`Tags: ${task.tags.join(', ')}`);
+  if (task.assignee) meta.push(`Assignee: ${task.assignee}`);
+  if (task.updatedAt) meta.push(`Updated: ${task.updatedAt}`);
+  lines.push(meta.join(' | '));
+  if (task.description.trim()) {
+    lines.push('', task.description.trim());
+  }
+  if (task.plan?.trim()) {
+    lines.push('', '### Plan', task.plan.trim());
+  }
+  return lines.join('\n');
+}
+
+const server = new McpServer({
+  name: 'taskplanner',
+  version: '1.0.0',
+});
+
+// ── taskplanner_board ───────────────────────────────────
+server.tool(
+  'taskplanner_board',
+  'Get a board overview with task counts per state and optionally list all tasks',
+  {
+    include_tasks: z
+      .boolean()
+      .optional()
+      .describe('If true, include full task listings per state (default: false)'),
+  },
+  async ({ include_tasks }) => {
+    const { taskStore } = freshStore();
+    const config = taskStore.config;
+    const lines: string[] = ['# Task Board'];
+
+    for (const state of config.states) {
+      taskStore.ensureStateLoaded(state.name);
+      const tasks = taskStore.getTasksByState(state.name);
+      lines.push(`\n## ${state.name} (${tasks.length})`);
+
+      if (include_tasks && tasks.length > 0) {
+        for (const task of tasks) {
+          lines.push(
+            `- **${task.id}**: ${task.title} [${task.priority}]${task.assignee ? ` @${task.assignee}` : ''}`,
+          );
+        }
+      }
+    }
+
+    return { content: [{ type: 'text', text: lines.join('\n') }] };
+  },
+);
+
+// ── taskplanner_list ────────────────────────────────────
+server.tool(
+  'taskplanner_list',
+  'List tasks for a specific state or all states, with optional text query filter',
+  {
+    state: z
+      .string()
+      .optional()
+      .describe(
+        'State name to filter by (e.g. "Backlog", "Next", "In Progress", "Done", "Rejected"). Omit for all states.',
+      ),
+    query: z
+      .string()
+      .optional()
+      .describe('Text query to filter tasks by ID, title, or assignee'),
+  },
+  async ({ state, query }) => {
+    const { taskStore } = freshStore();
+    const config = taskStore.config;
+    const statesToList = state
+      ? config.states.filter((s) => s.name.toLowerCase() === state.toLowerCase())
+      : config.states;
+
+    if (state && statesToList.length === 0) {
+      const validNames = config.states.map((s) => s.name).join(', ');
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Unknown state "${state}". Valid states: ${validNames}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const lines: string[] = [];
+    let totalCount = 0;
+
+    for (const s of statesToList) {
+      taskStore.ensureStateLoaded(s.name);
+      let tasks = taskStore.getTasksByState(s.name);
+      if (query) {
+        const q = query.toLowerCase();
+        tasks = tasks.filter(
+          (t) =>
+            t.id.toLowerCase().includes(q) ||
+            t.title.toLowerCase().includes(q) ||
+            (t.assignee && t.assignee.toLowerCase().includes(q)),
+        );
+      }
+      if (tasks.length === 0) continue;
+
+      lines.push(`## ${s.name} (${tasks.length})`);
+      for (const task of tasks) {
+        lines.push(formatTask(task, s.name), '\n---');
+      }
+      totalCount += tasks.length;
+    }
+
+    if (totalCount === 0) {
+      return {
+        content: [{ type: 'text', text: 'No tasks found matching the criteria.' }],
+      };
+    }
+
+    return {
+      content: [{ type: 'text', text: `${totalCount} task(s) found\n\n${lines.join('\n')}` }],
+    };
+  },
+);
+
+// ── taskplanner_get ─────────────────────────────────────
+server.tool(
+  'taskplanner_get',
+  'Get full details of a single task by its ID',
+  {
+    task_id: z.string().describe('Task ID (e.g. "TASK-001")'),
+  },
+  async ({ task_id }) => {
+    const { taskStore } = freshStore();
+    const found = taskStore.findTask(task_id);
+    if (!found) {
+      return {
+        content: [{ type: 'text', text: `Task "${task_id}" not found.` }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: 'text', text: formatTask(found.task, found.stateName) }],
+    };
+  },
+);
+
+// ── taskplanner_create ──────────────────────────────────
+server.tool(
+  'taskplanner_create',
+  'Create a new task. Returns the created task with its auto-generated ID.',
+  {
+    title: z.string().describe('Task title'),
+    description: z.string().optional().describe('Task description in markdown'),
+    priority: z
+      .enum(['P0', 'P1', 'P2', 'P3', 'P4'])
+      .optional()
+      .describe('Priority level (default: P2)'),
+    tags: z.array(z.string()).optional().describe('Tags for the task'),
+    assignee: z.string().optional().describe('Assignee name'),
+    state: z
+      .string()
+      .optional()
+      .describe('Target state (default: "Backlog")'),
+  },
+  async ({ title, description, priority, tags, assignee, state: targetState }) => {
+    const { taskStore, configManager } = freshStore();
+    const stateName = targetState || 'Backlog';
+    const validState = configManager.get().states.find(
+      (s) => s.name.toLowerCase() === stateName.toLowerCase(),
+    );
+    if (!validState) {
+      return {
+        content: [{ type: 'text', text: `Unknown state "${stateName}".` }],
+        isError: true,
+      };
+    }
+
+    const p = priority && isPriority(priority) ? (priority as Priority) : Priority.P2;
+    const task = taskStore.createTask(
+      {
+        title,
+        description: description || '',
+        priority: p,
+        tags: tags || [],
+        assignee,
+      },
+      validState.name,
+    );
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Created ${task.id}: ${task.title} [${task.priority}] in ${validState.name}`,
+        },
+      ],
+    };
+  },
+);
+
+// ── taskplanner_move ────────────────────────────────────
+server.tool(
+  'taskplanner_move',
+  'Move a task to a different state (e.g. from Backlog to In Progress)',
+  {
+    task_id: z.string().describe('Task ID to move'),
+    target_state: z
+      .string()
+      .describe(
+        'Target state name (e.g. "Backlog", "Next", "In Progress", "Done", "Rejected")',
+      ),
+  },
+  async ({ task_id, target_state }) => {
+    const { taskStore, configManager } = freshStore();
+    const validState = configManager.get().states.find(
+      (s) => s.name.toLowerCase() === target_state.toLowerCase(),
+    );
+    if (!validState) {
+      return {
+        content: [{ type: 'text', text: `Unknown state "${target_state}".` }],
+        isError: true,
+      };
+    }
+
+    const result = taskStore.moveTask(task_id, validState.name);
+    if (!result) {
+      return {
+        content: [{ type: 'text', text: `Task "${task_id}" not found.` }],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Moved ${result.id}: ${result.title} → ${validState.name}`,
+        },
+      ],
+    };
+  },
+);
+
+// ── taskplanner_update ──────────────────────────────────
+server.tool(
+  'taskplanner_update',
+  'Update fields of an existing task',
+  {
+    task_id: z.string().describe('Task ID to update'),
+    title: z.string().optional().describe('New title'),
+    description: z.string().optional().describe('New description'),
+    priority: z
+      .enum(['P0', 'P1', 'P2', 'P3', 'P4'])
+      .optional()
+      .describe('New priority'),
+    tags: z.array(z.string()).optional().describe('New tags (replaces existing)'),
+    assignee: z.string().optional().describe('New assignee'),
+    plan: z.string().optional().describe('New or updated plan text'),
+  },
+  async ({ task_id, title, description, priority, tags, assignee, plan }) => {
+    const { taskStore } = freshStore();
+    const updates: Partial<Omit<Task, 'id'>> = {};
+    if (title !== undefined) updates.title = title;
+    if (description !== undefined) updates.description = description;
+    if (priority !== undefined && isPriority(priority)) updates.priority = priority as Priority;
+    if (tags !== undefined) updates.tags = tags;
+    if (assignee !== undefined) updates.assignee = assignee;
+    if (plan !== undefined) updates.plan = plan;
+
+    const result = taskStore.updateTask(task_id, updates);
+    if (!result) {
+      return {
+        content: [{ type: 'text', text: `Task "${task_id}" not found.` }],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Updated ${result.id}: ${result.title} [${result.priority}]`,
+        },
+      ],
+    };
+  },
+);
+
+// ── Start ───────────────────────────────────────────────
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error('TaskPlanner MCP server running on stdio');
+}
+
+main().catch((e) => {
+  console.error('TaskPlanner MCP server failed to start:', e);
+  process.exit(1);
+});

@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { Task } from '../model/task.js';
 import { TaskState } from '../model/state.js';
@@ -29,6 +30,41 @@ export class FileStore {
     const result = new Map<string, ParseResult>();
     for (const state of config.states) {
       result.set(state.name, this.readState(state));
+    }
+    return result;
+  }
+
+  async readStateAsync(state: TaskState): Promise<ParseResult> {
+    const filePath = path.join(this.tasksDir, state.fileName);
+    try {
+      const content = await fsPromises.readFile(filePath, 'utf-8');
+      return parseTasks(content);
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT') {
+        return { tasks: [], warnings: [] };
+      }
+      throw e;
+    }
+  }
+
+  async readRawContentAsync(state: TaskState): Promise<string> {
+    const filePath = path.join(this.tasksDir, state.fileName);
+    try {
+      return await fsPromises.readFile(filePath, 'utf-8');
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT') {
+        return '';
+      }
+      throw e;
+    }
+  }
+
+  async readAllStatesAsync(config: TaskPlannerConfig): Promise<Map<string, ParseResult>> {
+    const result = new Map<string, ParseResult>();
+    for (const state of config.states) {
+      result.set(state.name, await this.readStateAsync(state));
     }
     return result;
   }

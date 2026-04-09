@@ -1,5 +1,21 @@
 # Done
 
+## TASK-024: Performance measurement and scalability limits
+**Priority:** P2 | **Tags:** core, testing
+**Updated:** 2026-04-01 19:36
+
+Measure performance of the current parser, serializer, and webview rendering with large task sets. Identify limitations and bottlenecks. Propose architectural updates (pagination, lazy loading, indexing) that would allow the system to handle significantly more tasks.
+The first ideas for performance:
+Use Async instead of Sync on file loads. Do not load Done and Rejected, before clicing on them. The number of tasks there might be stored in meta data.
+
+### Plan
+
+- **Implemented:** `countTaskHeadings()` (regex line scan); Vitest perf smoke tests (`src/test/core/performance/scalability.perf.test.ts`) and deferred-store tests; `FileStore.readStateAsync` / `readRawContentAsync` / `readAllStatesAsync`; `TaskStore.reloadAsync()` plus deferred **Done**/**Rejected** (heading counts in `getStateDisplayCounts`, full parse on `ensureStateLoaded`); `groupTasks` / `filterAndPaginate` optional `stateDisplayCounts`; sidebar expand/show-all and Kanban `showCompleted` load deferred states; `findTask` / `moveTask` / `createTask` / `fixDuplicates` / search-or-non-status grouping loads as needed; duplicate checks and move-without-id pick list call `ensureAllDeferredStatesLoaded()`.
+- **Bottlenecks (measurement):** parsing and serializing very large markdown dominates; grouping iterates all in-memory tasks; webviews still rebuild full HTML on each update.
+- **Follow-ups (not implemented):** virtualized list or incremental `postMessage` updates; sidecar offsets or streaming parse for huge single files; optional deferral for additional states.
+
+---
+
 ## TASK-032: AI workflow onboarding — activation prompt and stronger instructions (Phase 1)
 **Priority:** P2 | **Tags:** feature, setup
 **Updated:** 2026-04-01

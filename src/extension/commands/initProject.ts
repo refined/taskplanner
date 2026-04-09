@@ -26,7 +26,7 @@ export function registerInitCommand(
         fileStore.initializeStateFiles(configManager.get());
 
         // Reload task store
-        taskStore.reload();
+        await taskStore.reloadAsync();
 
         const autoInitAi = vscode.workspace
           .getConfiguration('taskplanner')

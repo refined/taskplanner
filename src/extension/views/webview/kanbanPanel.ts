@@ -101,6 +101,8 @@ export class KanbanPanel {
         this.update();
         break;
       case 'showCompleted':
+        this.taskStore.ensureStateLoaded('Done');
+        this.taskStore.ensureStateLoaded('Rejected');
         this.showAllForState.add('Done');
         this.showAllForState.add('Rejected');
         this.update();
@@ -156,15 +158,33 @@ export class KanbanPanel {
     this.syncParseWarningDismissState();
     const config = this.configManager.get();
     const states = config.states;
+    if (this.searchQuery.trim()) {
+      this.taskStore.ensureAllDeferredStatesLoaded();
+    }
     const allTasks = this.taskStore.getAllTasks();
     const filter: TaskFilter | undefined = this.searchQuery
       ? { query: this.searchQuery }
       : undefined;
-    const data = filterAndPaginate(allTasks, states, filter, undefined, this.sortBy);
+    const displayCounts = this.taskStore.getStateDisplayCounts();
+    const data = filterAndPaginate(
+      allTasks,
+      states,
+      filter,
+      undefined,
+      this.sortBy,
+      displayCounts,
+    );
 
     // Apply per-state "show all"
     if (this.showAllForState.size > 0) {
-      const unlimitedData = filterAndPaginate(allTasks, states, filter, null, this.sortBy);
+      const unlimitedData = filterAndPaginate(
+        allTasks,
+        states,
+        filter,
+        null,
+        this.sortBy,
+        displayCounts,
+      );
       for (const state of data.states) {
         if (this.showAllForState.has(state.name)) {
           const full = unlimitedData.states.find((s) => s.name === state.name);

@@ -22,7 +22,7 @@ export function createFileWatcher(
     debounceTimer = setTimeout(async () => {
       try {
         configManager.get();
-        taskStore.reload();
+        await taskStore.reloadAsync();
         await checkAndPromptDuplicateConflicts(taskStore, configManager);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

@@ -65,6 +65,7 @@ export function filterAndPaginate(
   filter?: TaskFilter,
   limit: number | null = DEFAULT_LIMIT,
   sortBy: TaskListSortBy = 'priority',
+  stateDisplayCounts?: ReadonlyMap<string, number>,
 ): TaskViewData {
   const result: StateViewData[] = [];
 
@@ -84,7 +85,9 @@ export function filterAndPaginate(
     // Apply sorting
     tasks = sortTasks(tasks, sortBy);
 
-    const totalCount = tasks.length;
+    const totalCount = filter?.query
+      ? tasks.length
+      : (stateDisplayCounts?.get(state.name) ?? tasks.length);
     const hasMore = limit !== null && totalCount > limit;
     const sliced = limit !== null ? tasks.slice(0, limit) : tasks;
 
@@ -109,6 +112,7 @@ export function groupTasks(
   filter?: TaskFilter,
   limit: number | null = DEFAULT_LIMIT,
   sortBy: TaskListSortBy = 'priority',
+  stateDisplayCounts?: ReadonlyMap<string, number>,
 ): GroupViewData[] {
   // Collect all tasks with their state name
   let allTasks: { task: Task; stateName: string }[] = [];
@@ -166,7 +170,9 @@ export function groupTasks(
         entries.map((e) => e.task),
         sortBy,
       );
-      const totalCount = sorted.length;
+      const totalCount = filter?.query
+        ? sorted.length
+        : (stateDisplayCounts?.get(state.name) ?? sorted.length);
       const hasMore = limit !== null && totalCount > limit;
       const sliced = limit !== null ? sorted.slice(0, limit) : sorted;
       result.push({

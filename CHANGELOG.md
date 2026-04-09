@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Large **Done** / **Rejected** files: heading-only counts on load, full parse when you expand those groups, use **Show all**, open the Kanban completed section, or when a command needs those tasks; reload uses async I/O. Scalability timing tests added (TASK-024).
 - Generated AI instructions (`Initialize AI Instructions`) and **Implement with AI** prompts no longer tell agents to create a git branch; branching remains optional for the user.
 
 ## [1.3.0] - 2026-04-02

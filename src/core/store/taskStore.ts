@@ -6,12 +6,24 @@ import { ConfigManager } from '../config/configManager.js';
 import { FileStore } from './fileStore.js';
 import { IdGenerator } from '../id/idGenerator.js';
 import { DuplicateResolution } from '../validation/duplicateDetector.js';
+import { countTaskHeadings } from '../parser/taskParser.js';
 
 export type TaskStoreListener = () => void;
+
+/** States that skip full parse on reload until explicitly loaded (large archives). */
+const DEFERRED_STATE_NAMES = new Set(['Done', 'Rejected']);
+
+export function isDeferredStateName(stateName: string): boolean {
+  return DEFERRED_STATE_NAMES.has(stateName);
+}
 
 export class TaskStore {
   private tasksByState: Map<string, Task[]> = new Map();
   private parseWarningsByFile: Map<string, ParseWarning[]> = new Map();
+  /** Done/Rejected not yet fully parsed; `tasksByState` holds [] until loaded. */
+  private deferredUnloadedStates: Set<string> = new Set();
+  /** Heading counts for deferred states (from `countTaskHeadings`). */
+  private deferredSectionCounts: Map<string, number> = new Map();
   private listeners: TaskStoreListener[] = [];
   private fileStore: FileStore;
   private idGenerator: IdGenerator;
@@ -29,30 +41,119 @@ export class TaskStore {
   }
 
   reload(): void {
-    const parsed = this.fileStore.readAllStates(this.config);
+    this.applyReloadSync();
+  }
+
+  private applyReloadSync(): void {
+    const config = this.config;
     this.tasksByState = new Map();
     this.parseWarningsByFile = new Map();
-    for (const state of this.config.states) {
-      const pr = parsed.get(state.name) ?? { tasks: [], warnings: [] };
-      this.tasksByState.set(state.name, pr.tasks);
-      if (pr.warnings.length > 0) {
-        this.parseWarningsByFile.set(state.fileName, pr.warnings);
+    this.deferredUnloadedStates.clear();
+    this.deferredSectionCounts.clear();
+
+    for (const state of config.states) {
+      if (isDeferredStateName(state.name)) {
+        const raw = this.fileStore.readRawContent(state);
+        this.deferredSectionCounts.set(state.name, countTaskHeadings(raw));
+        this.deferredUnloadedStates.add(state.name);
+        this.tasksByState.set(state.name, []);
+      } else {
+        const pr = this.fileStore.readState(state);
+        this.tasksByState.set(state.name, pr.tasks);
+        if (pr.warnings.length > 0) {
+          this.parseWarningsByFile.set(state.fileName, pr.warnings);
+        }
       }
     }
     this.notifyListeners();
   }
 
+  async reloadAsync(): Promise<void> {
+    const config = this.config;
+    this.tasksByState = new Map();
+    this.parseWarningsByFile = new Map();
+    this.deferredUnloadedStates.clear();
+    this.deferredSectionCounts.clear();
+
+    for (const state of config.states) {
+      if (isDeferredStateName(state.name)) {
+        const raw = await this.fileStore.readRawContentAsync(state);
+        this.deferredSectionCounts.set(state.name, countTaskHeadings(raw));
+        this.deferredUnloadedStates.add(state.name);
+        this.tasksByState.set(state.name, []);
+      } else {
+        const pr = await this.fileStore.readStateAsync(state);
+        this.tasksByState.set(state.name, pr.tasks);
+        if (pr.warnings.length > 0) {
+          this.parseWarningsByFile.set(state.fileName, pr.warnings);
+        }
+      }
+    }
+    this.notifyListeners();
+  }
+
+  /** Parse one state file into memory; clears deferred flag for that state. */
+  private parseStateIntoStore(stateName: string): void {
+    const state = this.findState(stateName);
+    if (!state) {
+      return;
+    }
+    const pr = this.fileStore.readState(state);
+    this.tasksByState.set(stateName, pr.tasks);
+    this.deferredUnloadedStates.delete(stateName);
+    this.deferredSectionCounts.set(stateName, pr.tasks.length);
+    this.parseWarningsByFile.delete(state.fileName);
+    if (pr.warnings.length > 0) {
+      this.parseWarningsByFile.set(state.fileName, pr.warnings);
+    }
+  }
+
   reloadState(stateName: string): void {
     const state = this.findState(stateName);
-    if (state) {
-      const pr = this.fileStore.readState(state);
-      this.tasksByState.set(stateName, pr.tasks);
-      this.parseWarningsByFile.delete(state.fileName);
-      if (pr.warnings.length > 0) {
-        this.parseWarningsByFile.set(state.fileName, pr.warnings);
-      }
-      this.notifyListeners();
+    if (!state) {
+      return;
     }
+    this.parseStateIntoStore(stateName);
+    this.notifyListeners();
+  }
+
+  /** Load a deferred state (Done/Rejected) if it was not parsed yet. */
+  ensureStateLoaded(stateName: string): void {
+    if (!this.deferredUnloadedStates.has(stateName)) {
+      return;
+    }
+    this.parseStateIntoStore(stateName);
+    this.notifyListeners();
+  }
+
+  /** Load every deferred state (e.g. assignee grouping, search, move picker). */
+  ensureAllDeferredStatesLoaded(): void {
+    const pending = [...this.deferredUnloadedStates];
+    if (pending.length === 0) {
+      return;
+    }
+    for (const name of pending) {
+      this.parseStateIntoStore(name);
+    }
+    this.notifyListeners();
+  }
+
+  /** Per-state counts for UI: heading count when deferred, else parsed task length. */
+  getStateDisplayCounts(): Map<string, number> {
+    const m = new Map<string, number>();
+    for (const s of this.config.states) {
+      const tasks = this.tasksByState.get(s.name) ?? [];
+      if (this.deferredUnloadedStates.has(s.name)) {
+        m.set(s.name, this.deferredSectionCounts.get(s.name) ?? 0);
+      } else {
+        m.set(s.name, tasks.length);
+      }
+    }
+    return m;
+  }
+
+  isStateDeferredUnloaded(stateName: string): boolean {
+    return this.deferredUnloadedStates.has(stateName);
   }
 
   getWarnings(): { fileName: string; warnings: ParseWarning[] }[] {
@@ -69,13 +170,34 @@ export class TaskStore {
     return new Map(this.tasksByState);
   }
 
-  findTask(taskId: string): { task: Task; stateName: string } | null {
+  private findInMemory(taskId: string): { task: Task; stateName: string } | null {
     for (const [stateName, tasks] of this.tasksByState) {
       const task = tasks.find((t) => t.id === taskId);
       if (task) {
         return { task, stateName };
       }
     }
+    return null;
+  }
+
+  findTask(taskId: string): { task: Task; stateName: string } | null {
+    let hit = this.findInMemory(taskId);
+    if (hit) {
+      return hit;
+    }
+    const pending = [...this.deferredUnloadedStates];
+    if (pending.length === 0) {
+      return null;
+    }
+    for (const stateName of pending) {
+      this.parseStateIntoStore(stateName);
+      hit = this.findInMemory(taskId);
+      if (hit) {
+        this.notifyListeners();
+        return hit;
+      }
+    }
+    this.notifyListeners();
     return null;
   }
 
@@ -88,6 +210,7 @@ export class TaskStore {
     if (!state) {
       throw new Error(`Unknown state: ${stateName}`);
     }
+    this.ensureStateLoaded(stateName);
 
     const id = this.idGenerator.next();
     const newTask: Task = { ...task, id, updatedAt: TaskStore.now() };
@@ -110,6 +233,7 @@ export class TaskStore {
     if (!found) {
       return null;
     }
+    this.ensureStateLoaded(targetStateName);
 
     const sourceState = this.findState(found.stateName);
     const targetState = this.findState(targetStateName);
@@ -275,6 +399,21 @@ export class TaskStore {
   }
 
   fixDuplicates(resolutions: DuplicateResolution[]): number {
+    const neededStates = new Set<string>();
+    for (const resolution of resolutions) {
+      neededStates.add(resolution.keep.stateName);
+      for (const dup of resolution.remove) {
+        neededStates.add(dup.stateName);
+      }
+    }
+    let loadedDeferred = false;
+    for (const name of neededStates) {
+      if (this.deferredUnloadedStates.has(name)) {
+        this.parseStateIntoStore(name);
+        loadedDeferred = true;
+      }
+    }
+
     let removedCount = 0;
     const removalsByState = new Map<string, Set<number>>();
 
@@ -305,7 +444,7 @@ export class TaskStore {
       this.fileStore.writeState(state, tasks);
     }
 
-    if (removedCount > 0) {
+    if (removedCount > 0 || loadedDeferred) {
       this.notifyListeners();
     }
 

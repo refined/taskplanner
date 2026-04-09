@@ -23,7 +23,7 @@ import { TaskListViewProvider } from './views/webview/taskListPanel.js';
 import { KanbanPanel } from './views/webview/kanbanPanel.js';
 import { scheduleAiInstructionSyncPrompt } from './aiInstructionSyncPrompt.js';
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
   if (!workspaceFolder) {
     return;
@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   if (isInitialized) {
     configManager.load();
-    taskStore.reload();
+    await taskStore.reloadAsync();
     void checkAndPromptDuplicateConflicts(taskStore, configManager);
     scheduleAiInstructionSyncPrompt(context, workspaceFolder.uri.fsPath, tasksDir);
   }
@@ -82,9 +82,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Refresh command
   context.subscriptions.push(
-    vscode.commands.registerCommand('taskplanner.refresh', () => {
+    vscode.commands.registerCommand('taskplanner.refresh', async () => {
       configManager.load();
-      taskStore.reload();
+      await taskStore.reloadAsync();
     }),
   );
 
@@ -114,6 +114,17 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(viewProviderDisposable, watcher);
+
+  // Register bundled Cursor plugin (no-op in plain VS Code)
+  try {
+    const pluginDir = path.join(context.extensionPath, 'cursor-plugin');
+    if (fs.existsSync(pluginDir)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (vscode as any).cursor?.plugins?.registerPath?.(pluginDir);
+    }
+  } catch {
+    // Not running in Cursor or API unavailable
+  }
 }
 
 export function deactivate() {

@@ -1,0 +1,22 @@
+.vscode/**
+.vscode-test/**
+src/**
+node_modules/**
+.gitignore
+.git/**
+*.vsix
+esbuild.js
+tsconfig.json
+vitest.config.ts
+.eslintrc.json
+.prettierrc
+.githooks/**
+.cursor/**
+.tasks/**
+example/**
+CONTRIBUTING.md
+agent-transcripts/**
+
+# Include the cursor plugin and its built MCP server
+!cursor-plugin/**
+!cursor-plugin/dist/**

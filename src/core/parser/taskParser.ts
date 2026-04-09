@@ -184,3 +184,18 @@ export function findTaskLineNumber(content: string, taskId: string): number {
   }
   return 1;
 }
+
+/** Count `## PREFIX-###:` task headings without full parsing (for deferred state loads). */
+export function countTaskHeadings(rawContent: string): number {
+  let content = rawContent;
+  if (content.length > 0 && content.charCodeAt(0) === 0xfeff) {
+    content = content.slice(1);
+  }
+  let n = 0;
+  for (const line of content.split('\n')) {
+    if (TASK_HEADING_RE.test(line)) {
+      n++;
+    }
+  }
+  return n;
+}

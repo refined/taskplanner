@@ -1,0 +1,16 @@
+---
+description: TaskPlanner task format and conventions when working with .tasks/ files
+alwaysApply: false
+globs: ".tasks/**"
+---
+
+When editing files in `.tasks/`:
+
+- Each task is a `## TASK-###: Title` heading section
+- Tasks are separated by `---` on its own line
+- Priority is required: `**Priority:** P0` through `P4`
+- Optional metadata: `**Tags:**`, `**Assignee:**`, `**Updated:**`, `**Epic:**`
+- A `### Plan` subsection can appear under the task heading
+- Do NOT change task IDs
+- Do NOT remove the `---` separators
+- When moving a task between files, remove it entirely from the source (including trailing `---`)

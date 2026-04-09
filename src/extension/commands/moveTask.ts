@@ -15,6 +15,7 @@ export function registerMoveTaskCommand(
         taskId = item;
       } else {
         // Prompt user to pick a task
+        taskStore.ensureAllDeferredStatesLoaded();
         const allTasks = taskStore.getAllTasks();
         const picks: vscode.QuickPickItem[] = [];
         for (const [stateName, tasks] of allTasks) {

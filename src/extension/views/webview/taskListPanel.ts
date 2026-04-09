@@ -3,6 +3,7 @@ import * as path from 'path';
 import { TaskStore } from '../../../core/store/taskStore.js';
 import { ConfigManager } from '../../../core/config/configManager.js';
 import { groupTasks, TaskListSortBy } from '../../../core/filter/taskFilter.js';
+import { isDeferredStateName } from '../../../core/store/taskStore.js';
 import { Task, Priority } from '../../../core/model/task.js';
 import { TaskFilter, GroupViewData, TaskViewItem } from '../../../core/model/messages.js';
 import { getWebviewHtml } from './webviewHelper.js';
@@ -125,17 +126,26 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
         break;
       case 'showAll':
         if (msg.groupLabel) {
-          this.showAllForGroup.add(msg.groupLabel as string);
+          const gl = msg.groupLabel as string;
+          if (isDeferredStateName(gl)) {
+            this.taskStore.ensureStateLoaded(gl);
+          }
+          this.showAllForGroup.add(gl);
         }
         this.update();
         break;
       case 'toggleGroup':
         {
           const label = msg.groupLabel as string;
-          if (this.toggledGroups.has(label)) {
+          const before = this.toggledGroups.has(label);
+          if (before) {
             this.toggledGroups.delete(label);
           } else {
             this.toggledGroups.add(label);
+          }
+          const after = this.toggledGroups.has(label);
+          if (!before && after && isDeferredStateName(label)) {
+            this.taskStore.ensureStateLoaded(label);
           }
         }
         this.update();
@@ -143,10 +153,15 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
       case 'expandGroup':
         if (msg.groupLabel) {
           const label = msg.groupLabel as string;
-          if (this.toggledGroups.has(label)) {
+          const before = this.toggledGroups.has(label);
+          if (before) {
             this.toggledGroups.delete(label);
           } else {
             this.toggledGroups.add(label);
+          }
+          const after = this.toggledGroups.has(label);
+          if (!before && after && isDeferredStateName(label)) {
+            this.taskStore.ensureStateLoaded(label);
           }
         }
         this.update();
@@ -244,13 +259,35 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
 
     const config = this.configManager.get();
     const states = config.states;
-    const allTasks = this.taskStore.getAllTasks();
     const groupBy = this.filter.groupBy ?? 'status';
+    const needAllTasks =
+      groupBy !== 'status' || this.sortBy === 'file' || Boolean(this.filter.query?.trim());
+    if (needAllTasks) {
+      this.taskStore.ensureAllDeferredStatesLoaded();
+    }
+    const allTasks = this.taskStore.getAllTasks();
+    const displayCounts = this.taskStore.getStateDisplayCounts();
 
-    const groups = groupTasks(allTasks, states, groupBy, this.filter, undefined, this.sortBy);
+    const groups = groupTasks(
+      allTasks,
+      states,
+      groupBy,
+      this.filter,
+      undefined,
+      this.sortBy,
+      displayCounts,
+    );
 
     if (this.showAllForGroup.size > 0) {
-      const unlimitedGroups = groupTasks(allTasks, states, groupBy, this.filter, null, this.sortBy);
+      const unlimitedGroups = groupTasks(
+        allTasks,
+        states,
+        groupBy,
+        this.filter,
+        null,
+        this.sortBy,
+        displayCounts,
+      );
       for (const group of groups) {
         if (this.showAllForGroup.has(group.label)) {
           const full = unlimitedGroups.find((g) => g.label === group.label);

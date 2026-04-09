@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTasks, findTaskLineNumber } from '../../core/parser/taskParser.js';
+import { parseTasks, findTaskLineNumber, countTaskHeadings } from '../../core/parser/taskParser.js';
 import { serializeStateFile } from '../../core/parser/taskSerializer.js';
 import { Priority } from '../../core/model/task.js';
 import type { Task } from '../../core/model/task.js';
@@ -435,6 +435,28 @@ this is orphaned
     expect(warnings).toHaveLength(0);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].id).toBe('TASK-001');
+  });
+});
+
+describe('countTaskHeadings', () => {
+  it('counts lines matching task heading pattern', () => {
+    const raw = `# Done
+
+## TASK-001: A
+**Priority:** P1
+
+---
+
+## TASK-002: B
+**Priority:** P2
+
+---
+`;
+    expect(countTaskHeadings(raw)).toBe(2);
+  });
+
+  it('returns 0 when there are no task sections', () => {
+    expect(countTaskHeadings('# Title only\n')).toBe(0);
   });
 });
 

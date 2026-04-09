@@ -97,6 +97,7 @@ export async function checkAndPromptDuplicateConflicts(
   taskStore: TaskStore,
   configManager: ConfigManager,
 ): Promise<void> {
+  taskStore.ensureAllDeferredStatesLoaded();
   const conflicts = detectDuplicates(taskStore.getAllTasks());
   if (conflicts.length === 0) {
     lastConflictSignature = '';
@@ -138,6 +139,7 @@ export function registerResolveConflictsCommand(
 ): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('taskplanner.resolveConflicts', async () => {
+      taskStore.ensureAllDeferredStatesLoaded();
       const conflicts = detectDuplicates(taskStore.getAllTasks());
       if (conflicts.length === 0) {
         vscode.window.showInformationMessage('No duplicate task IDs detected.');
