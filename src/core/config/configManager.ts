@@ -23,6 +23,16 @@ export class ConfigManager {
     return this.config;
   }
 
+  /** Re-read config.json without running migrations — picks up concurrent writes. */
+  reloadFromDisk(): void {
+    if (!fs.existsSync(this.configPath)) {
+      return;
+    }
+    const raw = fs.readFileSync(this.configPath, 'utf-8');
+    const parsed = JSON.parse(raw) as Partial<TaskPlannerConfig>;
+    this.config = { ...createDefaultConfig(), ...parsed };
+  }
+
   private migrateConfig(): void {
     let changed = false;
 
@@ -62,5 +72,15 @@ export class ConfigManager {
     this.config.nextId++;
     this.save();
     return id;
+  }
+
+  /** Raise `nextId` to `floor` if it is below. Returns true when config changed. */
+  reconcileNextId(floor: number): boolean {
+    if (this.config.nextId < floor) {
+      this.config.nextId = floor;
+      this.save();
+      return true;
+    }
+    return false;
   }
 }

@@ -1,13 +1,5 @@
 # Backlog
 
-## TASK-033: Visual views for Cursor Agents Window
-**Priority:** P3 | **Tags:** feature, ui
-**Updated:** 2026-04-09 21:55
-
-Investigate and implement visual panel/view support in the Cursor 3 Agents Window when Cursor exposes a contribution point for third-party extension UI. Currently the Agents Window is a custom-built surface with no documented API for extension views. Monitor Cursor changelogs and plugin API evolution for new capabilities (e.g. webview panels, sidebar widgets, or dashboard cards). When available, add a TaskPlanner task board view directly in the Agents Window alongside agent chats.
-
----
-
 ## TASK-023: CI/CD pipeline for extension delivery
 **Priority:** P4 | **Tags:** setup
 **Updated:** 2026-03-22 19:15
@@ -21,14 +13,6 @@ Automate publishing the extension to VS Code Marketplace and Cursor. Explore Jet
 **Updated:** 2026-03-20 00:00
 
 Build an IntelliJ IDEA plugin that reuses the core library for task parsing/serialization. Integrate support for the Julia task format.
-
----
-
-## TASK-020: Technical debt cleanup and code simplification
-**Priority:** P2 | **Tags:** refactor
-**Updated:** 2026-04-01 19:34
-
-Audit the codebase for duplicated logic, overly complex methods, and inconsistent base styles. Simplify and unify where possible.
 
 ---
 

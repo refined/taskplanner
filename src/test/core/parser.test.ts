@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseTasks, findTaskLineNumber, countTaskHeadings } from '../../core/parser/taskParser.js';
+import {
+  parseTasks,
+  findTaskLineNumber,
+  countTaskHeadings,
+  maxTaskIdNumber,
+} from '../../core/parser/taskParser.js';
 import { serializeStateFile } from '../../core/parser/taskSerializer.js';
 import { Priority } from '../../core/model/task.js';
 import type { Task } from '../../core/model/task.js';
@@ -457,6 +462,46 @@ describe('countTaskHeadings', () => {
 
   it('returns 0 when there are no task sections', () => {
     expect(countTaskHeadings('# Title only\n')).toBe(0);
+  });
+});
+
+describe('maxTaskIdNumber', () => {
+  it('returns 0 when no task headings are present', () => {
+    expect(maxTaskIdNumber('# Empty\n', 'TASK')).toBe(0);
+    expect(maxTaskIdNumber('', 'TASK')).toBe(0);
+  });
+
+  it('returns the highest numeric suffix for the prefix', () => {
+    const raw = `# Backlog
+
+## TASK-003: C
+**Priority:** P1
+
+---
+
+## TASK-041: A
+**Priority:** P1
+
+---
+
+## TASK-012: B
+**Priority:** P1
+
+---
+`;
+    expect(maxTaskIdNumber(raw, 'TASK')).toBe(41);
+  });
+
+  it('ignores task IDs that use a different prefix', () => {
+    const raw = `## BUG-999: noise
+## TASK-005: real
+`;
+    expect(maxTaskIdNumber(raw, 'TASK')).toBe(5);
+  });
+
+  it('handles BOM at the start of the file', () => {
+    const raw = `\uFEFF## TASK-007: x\n`;
+    expect(maxTaskIdNumber(raw, 'TASK')).toBe(7);
   });
 });
 

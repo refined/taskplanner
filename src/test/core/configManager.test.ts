@@ -51,6 +51,41 @@ describe('ConfigManager', () => {
     expect(fs.existsSync(path.join(nestedDir, 'config.json'))).toBe(true);
   });
 
+  it('reconcileNextId bumps nextId up to floor and persists', () => {
+    configManager.load();
+    expect(configManager.get().nextId).toBe(1);
+
+    const changed = configManager.reconcileNextId(42);
+    expect(changed).toBe(true);
+    expect(configManager.get().nextId).toBe(42);
+
+    const reloaded = new ConfigManager(tmpDir);
+    expect(reloaded.load().nextId).toBe(42);
+  });
+
+  it('reconcileNextId is a no-op when floor is not higher', () => {
+    configManager.load();
+    configManager.update({ nextId: 100 });
+    configManager.save();
+
+    expect(configManager.reconcileNextId(50)).toBe(false);
+    expect(configManager.reconcileNextId(100)).toBe(false);
+    expect(configManager.get().nextId).toBe(100);
+  });
+
+  it('reloadFromDisk picks up concurrent writes from another process', () => {
+    configManager.load();
+    expect(configManager.get().nextId).toBe(1);
+
+    const other = new ConfigManager(tmpDir);
+    other.load();
+    other.update({ nextId: 77 });
+    other.save();
+
+    configManager.reloadFromDisk();
+    expect(configManager.get().nextId).toBe(77);
+  });
+
   it('preserves unknown fields on load', () => {
     fs.writeFileSync(
       path.join(tmpDir, 'config.json'),

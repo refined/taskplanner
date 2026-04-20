@@ -6,7 +6,7 @@ import { ConfigManager } from '../config/configManager.js';
 import { FileStore } from './fileStore.js';
 import { IdGenerator } from '../id/idGenerator.js';
 import { DuplicateResolution } from '../validation/duplicateDetector.js';
-import { countTaskHeadings } from '../parser/taskParser.js';
+import { countTaskHeadings, maxTaskIdNumber } from '../parser/taskParser.js';
 
 export type TaskStoreListener = () => void;
 
@@ -170,6 +170,35 @@ export class TaskStore {
     return new Map(this.tasksByState);
   }
 
+  /**
+   * Highest task-ID number across every state. Loaded states read from memory;
+   * deferred states (Done/Rejected) scan raw file content so they stay deferred.
+   */
+  getMaxTaskIdNumber(): number {
+    const prefix = this.config.idPrefix;
+    let max = 0;
+    for (const [stateName, tasks] of this.tasksByState) {
+      if (this.deferredUnloadedStates.has(stateName)) {
+        const state = this.findState(stateName);
+        if (state) {
+          const raw = this.fileStore.readRawContent(state);
+          const n = maxTaskIdNumber(raw, prefix);
+          if (n > max) {
+            max = n;
+          }
+        }
+        continue;
+      }
+      for (const task of tasks) {
+        const parsed = this.idGenerator.parseId(task.id);
+        if (parsed && parsed.prefix === prefix && parsed.number > max) {
+          max = parsed.number;
+        }
+      }
+    }
+    return max;
+  }
+
   private findInMemory(taskId: string): { task: Task; stateName: string } | null {
     for (const [stateName, tasks] of this.tasksByState) {
       const task = tasks.find((t) => t.id === taskId);
@@ -212,6 +241,8 @@ export class TaskStore {
     }
     this.ensureStateLoaded(stateName);
 
+    this.configManager.reloadFromDisk();
+    this.configManager.reconcileNextId(this.getMaxTaskIdNumber() + 1);
     const id = this.idGenerator.next();
     const newTask: Task = { ...task, id, updatedAt: TaskStore.now() };
 

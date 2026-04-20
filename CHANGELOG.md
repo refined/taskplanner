@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Task IDs no longer collide after a merge: `nextId` is reconciled against the highest ID actually present in the task files on activate and before every create, so a stale or merged `config.json` never re-issues an existing ID (TASK-034).
+
 ## [1.4.2] - 2026-04-09
 
 ### Added
@@ -50,17 +54,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.2.0] - 2026-03-22
 
 ### Added
+
 - Search/filter on Kanban board with debounced input (TASK-028)
 - AI plan persistence — plans saved as `### Plan` subsections when tasks move through the workflow (TASK-016)
 - Auto-increment patch version on every commit via git pre-commit hook (TASK-018)
 
 ### Changed
+
 - Kanban board columns restructured: Backlog | Active (Next + In Progress) | Completed (Done + Rejected) (TASK-025)
 - README split into developer docs and user-facing marketplace page (TASK-022)
 
 ## [1.1.0] - 2026-03-20
 
 ### Added
+
 - Filtered task list as main view — grouped by status, searchable across all fields (TASK-013)
 - Assignee and Updated datetime fields on tasks (TASK-013)
 - Grouping controls: by status, assignee, date, or none (TASK-013)
@@ -68,11 +75,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Sort/group icon-button dropdowns with VS Code native styling (TASK-015)
 
 ### Fixed
+
 - Save button now closes the edit form and returns to list view (TASK-027)
 
 ## [1.0.0] - 2026-03-18
 
 ### Added
+
 - Project scaffolding: TypeScript + esbuild + Vitest + VS Code extension shell (TASK-001)
 - Regex-based markdown parser and serializer for task files (TASK-002)
 - Extension icon and activity bar branding (TASK-003)

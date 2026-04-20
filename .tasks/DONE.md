@@ -1,5 +1,22 @@
 # Done
 
+## TASK-034: When two users create a task
+**Priority:** P1 | **Tags:** consistency
+**Updated:** 2026-04-20 12:00
+
+When two users on the same git repo each create a task on their own branch, both read `nextId` from `.tasks/config.json` and allocate the same `TASK-NNN`. On merge, the repo ends up with duplicate IDs and the next allocation collides again. Fixed by treating the actual task files as the source of truth and reconciling `config.nextId` against the highest ID present on disk both on extension activate and immediately before each task creation.
+
+### Plan (done)
+
+- Added `maxTaskIdNumber(rawContent, prefix)` in `src/core/parser/taskParser.ts` — raw-content scan keeps deferred `Done`/`Rejected` files unparsed.
+- Added `ConfigManager.reconcileNextId(floor)` and `reloadFromDisk()`.
+- Added `TaskStore.getMaxTaskIdNumber()` — loaded states walk in-memory tasks; deferred states scan raw file content via `fileStore.readRawContent`.
+- `TaskStore.createTask` now calls `reloadFromDisk` + `reconcileNextId(getMaxTaskIdNumber()+1)` before `idGenerator.next()`.
+- Same reconcile call wired into `extension.ts` after `taskStore.reloadAsync()`.
+- Vitest coverage: parser scan (BOM, prefix isolation), `reconcileNextId` (bump vs no-op), `reloadFromDisk` (cross-process pickup), `getMaxTaskIdNumber` reading deferred states without forcing a parse, `createTask` allocating past a higher on-disk ID and past a higher on-disk `nextId`.
+
+---
+
 ## TASK-024: Performance measurement and scalability limits
 **Priority:** P2 | **Tags:** core, testing
 **Updated:** 2026-04-01 19:36

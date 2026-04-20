@@ -200,4 +200,62 @@ describe('TaskStore', () => {
     const order = taskStore.getTasksByState('Backlog').map((t) => t.id);
     expect(order).toEqual(['TASK-001', 'TASK-002']);
   });
+
+  it('getMaxTaskIdNumber walks loaded states and deferred raw content', () => {
+    // Seed Done (deferred) with a high id; seed Backlog with a lower one.
+    fs.writeFileSync(
+      path.join(tmpDir, 'DONE.md'),
+      `# Done\n\n## TASK-050: Archived\n**Priority:** P3\n\n---\n`,
+      'utf-8',
+    );
+    fs.writeFileSync(
+      path.join(tmpDir, 'BACKLOG.md'),
+      `# Backlog\n\n## TASK-002: Loaded\n**Priority:** P1\n\n---\n`,
+      'utf-8',
+    );
+    taskStore.reload();
+
+    expect(taskStore.isStateDeferredUnloaded('Done')).toBe(true);
+    expect(taskStore.getMaxTaskIdNumber()).toBe(50);
+    // Must not force a parse of Done.
+    expect(taskStore.isStateDeferredUnloaded('Done')).toBe(true);
+  });
+
+  it('createTask reconciles nextId past higher IDs already on disk', () => {
+    // Simulate a post-merge state: config.nextId stale, BACKLOG.md has a higher TASK-050.
+    fs.writeFileSync(
+      path.join(tmpDir, 'BACKLOG.md'),
+      `# Backlog\n\n## TASK-050: Merged in from another branch\n**Priority:** P2\n\n---\n`,
+      'utf-8',
+    );
+    taskStore.reload();
+    expect(configManager.get().nextId).toBe(1);
+
+    const task = taskStore.createTask(
+      { title: 'New', priority: Priority.P1, tags: [], description: '' },
+      'Next',
+    );
+
+    expect(task.id).toBe('TASK-051');
+    expect(configManager.get().nextId).toBe(52);
+  });
+
+  it('createTask reloads config.json to pick up another process bumping nextId', () => {
+    taskStore.createTask(
+      { title: 'First', priority: Priority.P1, tags: [], description: '' },
+      'Backlog',
+    );
+    // Another process writes a higher nextId to config.json.
+    const other = new ConfigManager(tmpDir);
+    other.load();
+    other.update({ nextId: 200 });
+    other.save();
+
+    const task = taskStore.createTask(
+      { title: 'Second', priority: Priority.P1, tags: [], description: '' },
+      'Backlog',
+    );
+
+    expect(task.id).toBe('TASK-200');
+  });
 });

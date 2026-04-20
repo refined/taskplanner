@@ -199,3 +199,23 @@ export function countTaskHeadings(rawContent: string): number {
   }
   return n;
 }
+
+/** Highest numeric suffix among `## PREFIX-NNN:` headings in raw markdown, or 0 if none. */
+export function maxTaskIdNumber(rawContent: string, prefix: string): number {
+  let content = rawContent;
+  if (content.length > 0 && content.charCodeAt(0) === 0xfeff) {
+    content = content.slice(1);
+  }
+  const re = new RegExp(`^## ${prefix}-(\\d+):`);
+  let max = 0;
+  for (const line of content.split('\n')) {
+    const m = line.match(re);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > max) {
+        max = n;
+      }
+    }
+  }
+  return max;
+}
