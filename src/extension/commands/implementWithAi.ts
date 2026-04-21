@@ -5,6 +5,12 @@ import * as os from 'os';
 import { TaskStore } from '../../core/store/taskStore.js';
 import { ConfigManager } from '../../core/config/configManager.js';
 import { composeImplementationPrompt } from '../../core/ai/promptComposer.js';
+import {
+  getAiTool,
+  setAiTool,
+  getClaudeCliCommand,
+  getCursorPlanAndSubmitAfterOpen,
+} from '../config/extensionConfig.js';
 
 export type AiTool = 'auto' | 'cursor' | 'claude-code' | 'vscode-chat' | 'claude-cli' | 'clipboard';
 
@@ -78,7 +84,7 @@ export function registerImplementWithAiCommand(
       const config = configManager.get();
       const prompt = composeImplementationPrompt(found.task, found.stateName, config);
 
-      const setting = vscode.workspace.getConfiguration('taskplanner').get<AiTool>('aiTool', 'auto');
+      const setting = getAiTool();
       const tool = setting === 'auto' ? detectAiTool() : setting;
 
       await dispatch(context, tool, prompt);
@@ -162,9 +168,7 @@ async function showAiProviderQuickPick(context: vscode.ExtensionContext): Promis
     return;
   }
 
-  await vscode.workspace
-    .getConfiguration('taskplanner')
-    .update('aiTool', picked.value, vscode.ConfigurationTarget.Global);
+  await setAiTool(picked.value);
   await context.globalState.update(GLOBAL_ONBOARDING_KEY, 'done');
   vscode.window.showInformationMessage(`TaskPlanner: AI tool set to "${picked.value}".`);
 }
@@ -215,9 +219,7 @@ async function dispatchVsCodeChat(prompt: string): Promise<void> {
 }
 
 async function dispatchClaudeCli(prompt: string): Promise<void> {
-  const template = vscode.workspace
-    .getConfiguration('taskplanner')
-    .get<string>('claudeCliCommand', 'claude {{file}}');
+  const template = getClaudeCliCommand();
   const tmpDir = os.tmpdir();
   const filePath = path.join(tmpDir, `taskplanner-ai-prompt-${Date.now()}.txt`);
   try {
@@ -258,10 +260,7 @@ async function dispatchCursor(context: vscode.ExtensionContext, prompt: string):
   }
 
   if (tier1Ok) {
-    const planSubmit = vscode.workspace
-      .getConfiguration('taskplanner')
-      .get<boolean>('cursorPlanAndSubmitAfterOpen', false);
-    if (planSubmit) {
+    if (getCursorPlanAndSubmitAfterOpen()) {
       await delay(200);
       await tryCursorPlanAndSubmit();
     }

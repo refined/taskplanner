@@ -22,6 +22,7 @@ import { createFileWatcher } from './watchers/fileWatcher.js';
 import { TaskListViewProvider } from './views/webview/taskListPanel.js';
 import { KanbanPanel } from './views/webview/kanbanPanel.js';
 import { scheduleAiInstructionSyncPrompt } from './aiInstructionSyncPrompt.js';
+import { getTaskDirectory } from './config/extensionConfig.js';
 
 export async function activate(context: vscode.ExtensionContext) {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -29,8 +30,7 @@ export async function activate(context: vscode.ExtensionContext) {
     return;
   }
 
-  const config = vscode.workspace.getConfiguration('taskplanner');
-  const taskDirName = config.get<string>('taskDirectory', '.tasks');
+  const taskDirName = getTaskDirectory();
   const tasksDir = path.join(workspaceFolder.uri.fsPath, taskDirName);
 
   const configManager = new ConfigManager(tasksDir);

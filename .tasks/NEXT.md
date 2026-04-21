@@ -1,13 +1,5 @@
 # Next
 
-## TASK-020: Technical debt cleanup and code simplification
-**Priority:** P2 | **Tags:** refactor
-**Updated:** 2026-04-09 19:45
-
-Audit the codebase for duplicated logic, overly complex methods, and inconsistent base styles. Simplify and unify where possible.
-
----
-
 ## TASK-033: Visual views for Cursor Agents Window
 **Priority:** P3 | **Tags:** feature, ui
 **Updated:** 2026-04-20 17:53

@@ -10,6 +10,17 @@ import {
 
 const DEFAULT_LIMIT = 50;
 
+function applyLimit<T>(
+  items: T[],
+  totalCount: number,
+  limit: number | null,
+): { sliced: T[]; hasMore: boolean } {
+  if (limit === null) {
+    return { sliced: items, hasMore: false };
+  }
+  return { sliced: items.slice(0, limit), hasMore: totalCount > limit };
+}
+
 function taskToViewItem(task: Task): TaskViewItem {
   return {
     id: task.id,
@@ -88,8 +99,7 @@ export function filterAndPaginate(
     const totalCount = filter?.query
       ? tasks.length
       : (stateDisplayCounts?.get(state.name) ?? tasks.length);
-    const hasMore = limit !== null && totalCount > limit;
-    const sliced = limit !== null ? tasks.slice(0, limit) : tasks;
+    const { sliced, hasMore } = applyLimit(tasks, totalCount, limit);
 
     result.push({
       name: state.name,
@@ -173,8 +183,7 @@ export function groupTasks(
       const totalCount = filter?.query
         ? sorted.length
         : (stateDisplayCounts?.get(state.name) ?? sorted.length);
-      const hasMore = limit !== null && totalCount > limit;
-      const sliced = limit !== null ? sorted.slice(0, limit) : sorted;
+      const { sliced, hasMore } = applyLimit(sorted, totalCount, limit);
       result.push({
         label: state.name,
         tasks: sliced.map(taskToViewItem),
@@ -193,8 +202,7 @@ export function groupTasks(
         sortBy,
       );
       const totalCount = sorted.length;
-      const hasMore = limit !== null && totalCount > limit;
-      const sliced = limit !== null ? sorted.slice(0, limit) : sorted;
+      const { sliced, hasMore } = applyLimit(sorted, totalCount, limit);
       result.push({
         label: key,
         tasks: sliced.map(taskToViewItem),

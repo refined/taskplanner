@@ -1,5 +1,5 @@
 import { Task, Priority, isPriority } from '../model/task.js';
-import { ParseResult } from '../model/parseResult.js';
+import { ParseResult, ParseWarning } from '../model/parseResult.js';
 
 const TASK_HEADING_RE = /^## ([A-Z]+-\d+):\s*(.+)$/;
 const PRIORITY_RE = /^\*\*Priority:\*\*\s*(\S+)/;
@@ -10,12 +10,12 @@ const UPDATED_RE = /^\*\*Updated:\*\*\s*(.+)/;
 const SEPARATOR_RE = /^---\s*$/;
 const PLAN_HEADING_RE = /^### Plan\s*$/;
 
-export function parseTasks(rawContent: string): ParseResult {
-  let content = rawContent;
-  if (content.length > 0 && content.charCodeAt(0) === 0xfeff) {
-    content = content.slice(1);
-  }
+function stripBom(content: string): string {
+  return content.length > 0 && content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
+}
 
+export function parseTasks(rawContent: string): ParseResult {
+  const content = stripBom(rawContent);
   const lines = content.split('\n');
   const tasks: Task[] = [];
   const warnings: ParseWarning[] = [];
@@ -187,10 +187,7 @@ export function findTaskLineNumber(content: string, taskId: string): number {
 
 /** Count `## PREFIX-###:` task headings without full parsing (for deferred state loads). */
 export function countTaskHeadings(rawContent: string): number {
-  let content = rawContent;
-  if (content.length > 0 && content.charCodeAt(0) === 0xfeff) {
-    content = content.slice(1);
-  }
+  const content = stripBom(rawContent);
   let n = 0;
   for (const line of content.split('\n')) {
     if (TASK_HEADING_RE.test(line)) {
@@ -202,10 +199,7 @@ export function countTaskHeadings(rawContent: string): number {
 
 /** Highest numeric suffix among `## PREFIX-NNN:` headings in raw markdown, or 0 if none. */
 export function maxTaskIdNumber(rawContent: string, prefix: string): number {
-  let content = rawContent;
-  if (content.length > 0 && content.charCodeAt(0) === 0xfeff) {
-    content = content.slice(1);
-  }
+  const content = stripBom(rawContent);
   const re = new RegExp(`^## ${prefix}-(\\d+):`);
   let max = 0;
   for (const line of content.split('\n')) {

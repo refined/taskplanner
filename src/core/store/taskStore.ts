@@ -7,6 +7,7 @@ import { FileStore } from './fileStore.js';
 import { IdGenerator } from '../id/idGenerator.js';
 import { DuplicateResolution } from '../validation/duplicateDetector.js';
 import { countTaskHeadings, maxTaskIdNumber } from '../parser/taskParser.js';
+import { currentTimestamp } from '../util/time.js';
 
 export type TaskStoreListener = () => void;
 
@@ -41,52 +42,51 @@ export class TaskStore {
   }
 
   reload(): void {
-    this.applyReloadSync();
+    this.reloadSync();
   }
 
-  private applyReloadSync(): void {
-    const config = this.config;
+  /** Reset in-memory state and deferred tracking to a blank slate before a reload. */
+  private resetReloadState(): void {
     this.tasksByState = new Map();
     this.parseWarningsByFile = new Map();
     this.deferredUnloadedStates.clear();
     this.deferredSectionCounts.clear();
+  }
 
-    for (const state of config.states) {
+  /** Record a deferred state (raw counted only; tasks loaded lazily). */
+  private applyDeferredState(state: TaskState, raw: string): void {
+    this.deferredSectionCounts.set(state.name, countTaskHeadings(raw));
+    this.deferredUnloadedStates.add(state.name);
+    this.tasksByState.set(state.name, []);
+  }
+
+  /** Record a fully-parsed state's tasks and warnings. */
+  private applyParsedState(state: TaskState, pr: { tasks: Task[]; warnings: ParseWarning[] }): void {
+    this.tasksByState.set(state.name, pr.tasks);
+    if (pr.warnings.length > 0) {
+      this.parseWarningsByFile.set(state.fileName, pr.warnings);
+    }
+  }
+
+  private reloadSync(): void {
+    this.resetReloadState();
+    for (const state of this.config.states) {
       if (isDeferredStateName(state.name)) {
-        const raw = this.fileStore.readRawContent(state);
-        this.deferredSectionCounts.set(state.name, countTaskHeadings(raw));
-        this.deferredUnloadedStates.add(state.name);
-        this.tasksByState.set(state.name, []);
+        this.applyDeferredState(state, this.fileStore.readRawContent(state));
       } else {
-        const pr = this.fileStore.readState(state);
-        this.tasksByState.set(state.name, pr.tasks);
-        if (pr.warnings.length > 0) {
-          this.parseWarningsByFile.set(state.fileName, pr.warnings);
-        }
+        this.applyParsedState(state, this.fileStore.readState(state));
       }
     }
     this.notifyListeners();
   }
 
   async reloadAsync(): Promise<void> {
-    const config = this.config;
-    this.tasksByState = new Map();
-    this.parseWarningsByFile = new Map();
-    this.deferredUnloadedStates.clear();
-    this.deferredSectionCounts.clear();
-
-    for (const state of config.states) {
+    this.resetReloadState();
+    for (const state of this.config.states) {
       if (isDeferredStateName(state.name)) {
-        const raw = await this.fileStore.readRawContentAsync(state);
-        this.deferredSectionCounts.set(state.name, countTaskHeadings(raw));
-        this.deferredUnloadedStates.add(state.name);
-        this.tasksByState.set(state.name, []);
+        this.applyDeferredState(state, await this.fileStore.readRawContentAsync(state));
       } else {
-        const pr = await this.fileStore.readStateAsync(state);
-        this.tasksByState.set(state.name, pr.tasks);
-        if (pr.warnings.length > 0) {
-          this.parseWarningsByFile.set(state.fileName, pr.warnings);
-        }
+        this.applyParsedState(state, await this.fileStore.readStateAsync(state));
       }
     }
     this.notifyListeners();
@@ -230,10 +230,6 @@ export class TaskStore {
     return null;
   }
 
-  private static now(): string {
-    return new Date().toISOString().replace('T', ' ').slice(0, 16);
-  }
-
   createTask(task: Omit<Task, 'id'>, stateName: string): Task {
     const state = this.findState(stateName);
     if (!state) {
@@ -244,7 +240,7 @@ export class TaskStore {
     this.configManager.reloadFromDisk();
     this.configManager.reconcileNextId(this.getMaxTaskIdNumber() + 1);
     const id = this.idGenerator.next();
-    const newTask: Task = { ...task, id, updatedAt: TaskStore.now() };
+    const newTask: Task = { ...task, id, updatedAt: currentTimestamp() };
 
     const tasks = this.getTasksByState(stateName);
     if (this.config.insertPosition === 'top') {
@@ -282,7 +278,7 @@ export class TaskStore {
     this.fileStore.writeState(sourceState, sourceTasks);
 
     // Add to target with updated timestamp
-    found.task.updatedAt = TaskStore.now();
+    found.task.updatedAt = currentTimestamp();
     const targetTasks = [...this.getTasksByState(targetStateName)].filter((t) => t.id !== taskId);
     if (targetIndex !== undefined) {
       const clamped = Math.max(0, Math.min(targetIndex, targetTasks.length));
@@ -333,7 +329,7 @@ export class TaskStore {
       return found.task;
     }
 
-    const updatedTask: Task = { ...found.task, ...updates, id: taskId, updatedAt: TaskStore.now() };
+    const updatedTask: Task = { ...found.task, ...updates, id: taskId, updatedAt: currentTimestamp() };
     const tasks = this.getTasksByState(found.stateName).map((t) =>
       t.id === taskId ? updatedTask : t,
     );

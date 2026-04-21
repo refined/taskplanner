@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Internal refactor: removed duplicated BOM stripping, pagination slicing, and sync/async reload scaffolding in core; centralized VS Code extension settings access behind typed getters/setters. No user-visible behavior change (TASK-020).
+
 ### Fixed
 
 - Task IDs no longer collide after a merge: `nextId` is reconciled against the highest ID actually present in the task files on activate and before every create, so a stale or merged `config.json` never re-issues an existing ID (TASK-034).

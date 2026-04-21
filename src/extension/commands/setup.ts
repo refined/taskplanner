@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { ConfigManager } from '../../core/config/configManager.js';
+import { getSortBy, setSortBy } from '../config/extensionConfig.js';
 
 export function registerSetupCommand(
   context: vscode.ExtensionContext,
@@ -61,9 +62,7 @@ export function registerSetupCommand(
         id: 'ID',
         file: 'File order',
       };
-      const currentSort = vscode.workspace
-        .getConfiguration('taskplanner')
-        .get<string>('sortBy', 'priority');
+      const currentSort = getSortBy();
       items.push({
         label: `$(list-ordered) Sort By: ${sortLabels[currentSort]}`,
         description: 'Change task sort order',
@@ -122,9 +121,7 @@ export function registerSetupCommand(
             placeHolder: 'Select sort order',
           });
           if (sortPicked) {
-            await vscode.workspace
-              .getConfiguration('taskplanner')
-              .update('sortBy', sortPicked.value, vscode.ConfigurationTarget.Workspace);
+            await setSortBy(sortPicked.value);
             vscode.window.showInformationMessage(`Sort order set to: ${sortPicked.label}`);
           }
           break;

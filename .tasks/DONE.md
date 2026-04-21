@@ -1,5 +1,24 @@
 # Done
 
+## TASK-020: Technical debt cleanup and code simplification
+**Priority:** P2 | **Tags:** refactor
+**Updated:** 2026-04-20 18:00
+
+Audit the codebase for duplicated logic, overly complex methods, and inconsistent base styles. Simplify and unify where possible.
+
+### Plan (done)
+
+- Extracted `stripBom()` in `src/core/parser/taskParser.ts` — removed 3 inlined BOM checks.
+- Extracted generic `applyLimit<T>()` in `src/core/filter/taskFilter.ts` — removed 3 duplicated `limit !== null` slice pairs.
+- Unified `TaskStore.reloadSync()` / `reloadAsync()`: renamed `applyReloadSync` → `reloadSync`, factored `resetReloadState`, `applyDeferredState`, `applyParsedState` helpers so both paths are ~6 lines each.
+- Added `src/core/util/time.ts` exporting `currentTimestamp()`; replaced the static `TaskStore.now()` and its 3 call sites. Format preserved (`YYYY-MM-DD HH:MM`).
+- Added `src/extension/config/extensionConfig.ts` with typed getters/setters (`getTaskDirectory`, `getAutoInitAiFiles`, `getAiTool`/`setAiTool`, `getClaudeCliCommand`, `getCursorPlanAndSubmitAfterOpen`, `getSortBy`/`setSortBy`, `getGroupBy`/`setGroupBy`). Routed all `extension.ts`, `initProject.ts`, `implementWithAi.ts`, `setup.ts`, `taskListPanel.ts`, `kanbanPanel.ts` callers through it — zero direct `getConfiguration('taskplanner')` calls remain.
+- Added missing `ParseWarning` import in `taskParser.ts` (latent type error surfaced while touching imports).
+- Verified: `npm run lint` clean, `npm test` 100/100 passing, `npm run build` succeeds.
+- Deliberately skipped: deferred-loading internals, parser state machine, FileStore sync/async pair consolidation, and on-disk timestamp format (each is a separate task).
+
+---
+
 ## TASK-034: When two users create a task
 **Priority:** P1 | **Tags:** consistency
 **Updated:** 2026-04-20 12:00

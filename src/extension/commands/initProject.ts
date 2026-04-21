@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ConfigManager } from '../../core/config/configManager.js';
 import { FileStore } from '../../core/store/fileStore.js';
 import { TaskStore } from '../../core/store/taskStore.js';
+import { getAutoInitAiFiles } from '../config/extensionConfig.js';
 
 export function registerInitCommand(
   context: vscode.ExtensionContext,
@@ -28,11 +29,7 @@ export function registerInitCommand(
         // Reload task store
         await taskStore.reloadAsync();
 
-        const autoInitAi = vscode.workspace
-          .getConfiguration('taskplanner')
-          .get<boolean>('autoInitAiFiles', true);
-
-        if (autoInitAi) {
+        if (getAutoInitAiFiles()) {
           await vscode.commands.executeCommand('taskplanner.initAi');
         }
 

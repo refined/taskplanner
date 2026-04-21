@@ -7,6 +7,13 @@ import { isDeferredStateName } from '../../../core/store/taskStore.js';
 import { Task, Priority } from '../../../core/model/task.js';
 import { TaskFilter, GroupViewData, TaskViewItem } from '../../../core/model/messages.js';
 import { getWebviewHtml } from './webviewHelper.js';
+import {
+  getSortBy,
+  getGroupBy,
+  setSortBy,
+  setGroupBy,
+  GroupBy,
+} from '../../config/extensionConfig.js';
 
 export class TaskListViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'taskplanner.taskView';
@@ -65,25 +72,9 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
     this.update();
   }
 
-  private getSortByFromSettings(): TaskListSortBy {
-    const value = vscode.workspace
-      .getConfiguration('taskplanner')
-      .get<string>('sortBy', 'priority');
-    if (value === 'priority' || value === 'name' || value === 'id' || value === 'file')
-      return value;
-    return 'priority';
-  }
-
-  private getGroupByFromSettings(): 'status' | 'assignee' | 'date' | 'none' {
-    const value = vscode.workspace.getConfiguration('taskplanner').get<string>('groupBy', 'status');
-    if (value === 'status' || value === 'assignee' || value === 'date' || value === 'none')
-      return value;
-    return 'status';
-  }
-
   private syncSettingsFromWorkspace(): void {
-    this.sortBy = this.getSortByFromSettings();
-    this.filter.groupBy = this.getGroupByFromSettings();
+    this.sortBy = getSortBy();
+    this.filter.groupBy = getGroupBy();
   }
 
   public showTask(taskId: string): void {
@@ -110,15 +101,11 @@ export class TaskListViewProvider implements vscode.WebviewViewProvider {
           const nextSortBy = this.sortBy;
 
           if (nextGroupBy !== prevGroupBy) {
-            void vscode.workspace
-              .getConfiguration('taskplanner')
-              .update('groupBy', nextGroupBy, vscode.ConfigurationTarget.Workspace);
+            void setGroupBy(nextGroupBy as GroupBy);
           }
 
           if (nextSortBy !== prevSortBy) {
-            void vscode.workspace
-              .getConfiguration('taskplanner')
-              .update('sortBy', nextSortBy, vscode.ConfigurationTarget.Workspace);
+            void setSortBy(nextSortBy);
           }
         }
         this.showAllForGroup.clear();

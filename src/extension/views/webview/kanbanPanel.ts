@@ -10,6 +10,7 @@ import {
   TaskFilter,
 } from '../../../core/model/messages.js';
 import { getWebviewHtml } from './webviewHelper.js';
+import { getSortBy, setSortBy } from '../../config/extensionConfig.js';
 
 export class KanbanPanel {
   private static instance: KanbanPanel | undefined;
@@ -68,17 +69,8 @@ export class KanbanPanel {
     }
   }
 
-  private getSortByFromSettings(): TaskListSortBy {
-    const value = vscode.workspace
-      .getConfiguration('taskplanner')
-      .get<string>('sortBy', 'priority');
-    if (value === 'priority' || value === 'name' || value === 'id' || value === 'file')
-      return value;
-    return 'priority';
-  }
-
   private syncSortFromSettings(): void {
-    this.sortBy = this.getSortByFromSettings();
+    this.sortBy = getSortBy();
   }
 
   private syncParseWarningDismissState(): void {
@@ -121,9 +113,7 @@ export class KanbanPanel {
           const nextSortBy = msg.sortBy as TaskListSortBy;
           if (nextSortBy !== this.sortBy) {
             this.sortBy = nextSortBy;
-            void vscode.workspace
-              .getConfiguration('taskplanner')
-              .update('sortBy', nextSortBy, vscode.ConfigurationTarget.Workspace);
+            void setSortBy(nextSortBy);
           }
           this.update();
         }
