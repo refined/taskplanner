@@ -1,4 +1,6 @@
 const esbuild = require('esbuild');
+const fs = require('fs');
+const path = require('path');
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -12,6 +14,51 @@ const shared = {
   platform: 'node',
   logLevel: 'info',
 };
+
+const boardUiDir = path.join(__dirname, 'src', 'mcp', 'ui', 'board');
+const boardUiOutDir = path.join(__dirname, 'cursor-plugin', 'ui', 'board');
+const boardHtmlTemplate = path.join(boardUiDir, 'board.html');
+const boardCssFile = path.join(boardUiDir, 'board.css');
+const boardHtmlOut = path.join(boardUiOutDir, 'index.html');
+
+async function buildBoardUi() {
+  const result = await esbuild.build({
+    entryPoints: [path.join(boardUiDir, 'board.ts')],
+    bundle: true,
+    format: 'iife',
+    platform: 'browser',
+    target: ['es2020'],
+    minify: production,
+    sourcemap: false,
+    sourcesContent: false,
+    write: false,
+    logLevel: 'silent',
+  });
+  const js = result.outputFiles[0].text;
+  const css = fs.readFileSync(boardCssFile, 'utf8');
+  const template = fs.readFileSync(boardHtmlTemplate, 'utf8');
+  const html = template
+    .replace('/*__CSS__*/', () => css)
+    .replace('/*__JS__*/', () => js);
+  fs.mkdirSync(boardUiOutDir, { recursive: true });
+  fs.writeFileSync(boardHtmlOut, html, 'utf8');
+  console.log(`[board-ui] wrote ${path.relative(__dirname, boardHtmlOut)} (${html.length} bytes)`);
+}
+
+function boardUiWatchPlugin() {
+  return {
+    name: 'board-ui',
+    setup(build) {
+      build.onStart(async () => {
+        try {
+          await buildBoardUi();
+        } catch (e) {
+          console.error('[board-ui] build failed:', e.message);
+        }
+      });
+    },
+  };
+}
 
 async function main() {
   const extensionCtx = await esbuild.context({
@@ -38,6 +85,7 @@ async function main() {
     entryPoints: ['src/mcp/server.ts'],
     outfile: 'cursor-plugin/dist/mcp-server.js',
     plugins: [
+      boardUiWatchPlugin(),
       {
         name: 'watch-plugin',
         setup(build) {

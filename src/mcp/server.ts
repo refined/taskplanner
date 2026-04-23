@@ -7,16 +7,50 @@ import { ConfigManager } from '../core/config/configManager.js';
 import { FileStore } from '../core/store/fileStore.js';
 import { TaskStore } from '../core/store/taskStore.js';
 import { Task, Priority, isPriority } from '../core/model/task.js';
+import { buildBoardViewModel } from '../core/view/boardViewModel.js';
+
+function findExistingTasksDir(rootDir: string): string | null {
+  const tasksDir = path.join(rootDir, '.tasks');
+  if (!fs.existsSync(tasksDir)) return null;
+  const configPath = path.join(tasksDir, 'config.json');
+  if (!fs.existsSync(configPath)) return null;
+  return tasksDir;
+}
+
+function candidateRoots(): string[] {
+  const candidates = new Set<string>();
+  const push = (value: string | undefined) => {
+    if (!value || !value.trim()) return;
+    candidates.add(path.resolve(value));
+  };
+
+  push(process.cwd());
+  push(process.env.CURSOR_WORKSPACE_ROOT);
+  push(process.env.VSCODE_WORKSPACE_ROOT);
+  push(process.env.PWD);
+  push(process.env.INIT_CWD);
+  push(path.resolve(__dirname, '..', '..'));
+
+  try {
+    const realDistDir = fs.realpathSync(__dirname);
+    push(path.resolve(realDistDir, '..', '..'));
+  } catch {
+    // best-effort only
+  }
+
+  return Array.from(candidates);
+}
 
 function findTasksDir(): string {
-  const cwd = process.cwd();
-  const defaultDir = path.join(cwd, '.tasks');
-  if (fs.existsSync(defaultDir)) {
-    return defaultDir;
+  const checked: string[] = [];
+  for (const root of candidateRoots()) {
+    checked.push(root);
+    const resolved = findExistingTasksDir(root);
+    if (resolved) return resolved;
   }
   throw new Error(
-    `No .tasks/ directory found in ${cwd}. ` +
-      'Run "TaskPlanner: Initialize Project" first.',
+    `No .tasks/ directory found. Checked: ${checked.join(', ')}. ` +
+      'Open a workspace with .tasks/ (or run "TaskPlanner: Initialize Project" first).',
   );
 }
 
@@ -53,14 +87,16 @@ const server = new McpServer({
 });
 
 // ── taskplanner_board ───────────────────────────────────
-server.tool(
+server.registerTool(
   'taskplanner_board',
-  'Get a board overview with task counts per state and optionally list all tasks',
   {
-    include_tasks: z
-      .boolean()
-      .optional()
-      .describe('If true, include full task listings per state (default: false)'),
+    description: 'Get a board overview with task counts per state and optionally list all tasks',
+    inputSchema: {
+      include_tasks: z
+        .boolean()
+        .optional()
+        .describe('If true, include full task listings per state (default: false)'),
+    },
   },
   async ({ include_tasks }) => {
     const { taskStore } = freshStore();
@@ -86,20 +122,22 @@ server.tool(
 );
 
 // ── taskplanner_list ────────────────────────────────────
-server.tool(
+server.registerTool(
   'taskplanner_list',
-  'List tasks for a specific state or all states, with optional text query filter',
   {
-    state: z
-      .string()
-      .optional()
-      .describe(
-        'State name to filter by (e.g. "Backlog", "Next", "In Progress", "Done", "Rejected"). Omit for all states.',
-      ),
-    query: z
-      .string()
-      .optional()
-      .describe('Text query to filter tasks by ID, title, or assignee'),
+    description: 'List tasks for a specific state or all states, with optional text query filter',
+    inputSchema: {
+      state: z
+        .string()
+        .optional()
+        .describe(
+          'State name to filter by (e.g. "Backlog", "Next", "In Progress", "Done", "Rejected"). Omit for all states.',
+        ),
+      query: z
+        .string()
+        .optional()
+        .describe('Text query to filter tasks by ID, title, or assignee'),
+    },
   },
   async ({ state, query }) => {
     const { taskStore } = freshStore();
@@ -158,11 +196,13 @@ server.tool(
 );
 
 // ── taskplanner_get ─────────────────────────────────────
-server.tool(
+server.registerTool(
   'taskplanner_get',
-  'Get full details of a single task by its ID',
   {
-    task_id: z.string().describe('Task ID (e.g. "TASK-001")'),
+    description: 'Get full details of a single task by its ID',
+    inputSchema: {
+      task_id: z.string().describe('Task ID (e.g. "TASK-001")'),
+    },
   },
   async ({ task_id }) => {
     const { taskStore } = freshStore();
@@ -180,22 +220,24 @@ server.tool(
 );
 
 // ── taskplanner_create ──────────────────────────────────
-server.tool(
+server.registerTool(
   'taskplanner_create',
-  'Create a new task. Returns the created task with its auto-generated ID.',
   {
-    title: z.string().describe('Task title'),
-    description: z.string().optional().describe('Task description in markdown'),
-    priority: z
-      .enum(['P0', 'P1', 'P2', 'P3', 'P4'])
-      .optional()
-      .describe('Priority level (default: P2)'),
-    tags: z.array(z.string()).optional().describe('Tags for the task'),
-    assignee: z.string().optional().describe('Assignee name'),
-    state: z
-      .string()
-      .optional()
-      .describe('Target state (default: "Backlog")'),
+    description: 'Create a new task. Returns the created task with its auto-generated ID.',
+    inputSchema: {
+      title: z.string().describe('Task title'),
+      description: z.string().optional().describe('Task description in markdown'),
+      priority: z
+        .enum(['P0', 'P1', 'P2', 'P3', 'P4'])
+        .optional()
+        .describe('Priority level (default: P2)'),
+      tags: z.array(z.string()).optional().describe('Tags for the task'),
+      assignee: z.string().optional().describe('Assignee name'),
+      state: z
+        .string()
+        .optional()
+        .describe('Target state (default: "Backlog")'),
+    },
   },
   async ({ title, description, priority, tags, assignee, state: targetState }) => {
     const { taskStore, configManager } = freshStore();
@@ -234,16 +276,18 @@ server.tool(
 );
 
 // ── taskplanner_move ────────────────────────────────────
-server.tool(
+server.registerTool(
   'taskplanner_move',
-  'Move a task to a different state (e.g. from Backlog to In Progress)',
   {
-    task_id: z.string().describe('Task ID to move'),
-    target_state: z
-      .string()
-      .describe(
-        'Target state name (e.g. "Backlog", "Next", "In Progress", "Done", "Rejected")',
-      ),
+    description: 'Move a task to a different state (e.g. from Backlog to In Progress)',
+    inputSchema: {
+      task_id: z.string().describe('Task ID to move'),
+      target_state: z
+        .string()
+        .describe(
+          'Target state name (e.g. "Backlog", "Next", "In Progress", "Done", "Rejected")',
+        ),
+    },
   },
   async ({ task_id, target_state }) => {
     const { taskStore, configManager } = freshStore();
@@ -277,20 +321,22 @@ server.tool(
 );
 
 // ── taskplanner_update ──────────────────────────────────
-server.tool(
+server.registerTool(
   'taskplanner_update',
-  'Update fields of an existing task',
   {
-    task_id: z.string().describe('Task ID to update'),
-    title: z.string().optional().describe('New title'),
-    description: z.string().optional().describe('New description'),
-    priority: z
-      .enum(['P0', 'P1', 'P2', 'P3', 'P4'])
-      .optional()
-      .describe('New priority'),
-    tags: z.array(z.string()).optional().describe('New tags (replaces existing)'),
-    assignee: z.string().optional().describe('New assignee'),
-    plan: z.string().optional().describe('New or updated plan text'),
+    description: 'Update fields of an existing task',
+    inputSchema: {
+      task_id: z.string().describe('Task ID to update'),
+      title: z.string().optional().describe('New title'),
+      description: z.string().optional().describe('New description'),
+      priority: z
+        .enum(['P0', 'P1', 'P2', 'P3', 'P4'])
+        .optional()
+        .describe('New priority'),
+      tags: z.array(z.string()).optional().describe('New tags (replaces existing)'),
+      assignee: z.string().optional().describe('New assignee'),
+      plan: z.string().optional().describe('New or updated plan text'),
+    },
   },
   async ({ task_id, title, description, priority, tags, assignee, plan }) => {
     const { taskStore } = freshStore();
@@ -315,6 +361,85 @@ server.tool(
         {
           type: 'text',
           text: `Updated ${result.id}: ${result.title} [${result.priority}]`,
+        },
+      ],
+    };
+  },
+);
+
+// ── taskplanner_board_data (JSON for the visual board UI) ──
+server.registerTool(
+  'taskplanner_board_data',
+  {
+    description: 'Get board state as JSON (states + tasks). Used by the visual board iframe.',
+    inputSchema: {
+      query: z.string().optional().describe('Optional text query to filter tasks'),
+    },
+  },
+  async ({ query }) => {
+    const { taskStore, configManager } = freshStore();
+    const viewModel = buildBoardViewModel(taskStore, configManager, {
+      searchQuery: query,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(viewModel) }] };
+  },
+);
+
+// ── taskplanner_board_visual (MCP Apps UI entry) ─────────
+// MCP Apps spec: https://modelcontextprotocol.io/extensions/apps
+const BOARD_RESOURCE_URI = 'ui://taskplanner/board';
+const MCP_APP_MIME_TYPE = 'text/html;profile=mcp-app';
+const LEGACY_UI_META_KEY = 'ui/resourceUri';
+
+let cachedBoardHtml: string | null = null;
+function readBoardHtml(): string {
+  if (cachedBoardHtml) return cachedBoardHtml;
+  const htmlPath = path.join(__dirname, '..', 'ui', 'board', 'index.html');
+  cachedBoardHtml = fs.readFileSync(htmlPath, 'utf8');
+  return cachedBoardHtml;
+}
+
+server.registerResource(
+  'TaskPlanner Board',
+  BOARD_RESOURCE_URI,
+  {
+    mimeType: MCP_APP_MIME_TYPE,
+    description: 'Interactive kanban board for TaskPlanner tasks.',
+  },
+  async () => ({
+    contents: [
+      {
+        uri: BOARD_RESOURCE_URI,
+        mimeType: MCP_APP_MIME_TYPE,
+        text: readBoardHtml(),
+      },
+    ],
+  }),
+);
+
+server.registerTool(
+  'taskplanner_board_visual',
+  {
+    title: 'Visual Task Board',
+    description:
+      'Open the TaskPlanner board as an interactive panel inline in chat. Shows all states as columns with drag-to-move and task details.',
+    inputSchema: {},
+    _meta: {
+      ui: { resourceUri: BOARD_RESOURCE_URI },
+      [LEGACY_UI_META_KEY]: BOARD_RESOURCE_URI,
+    },
+  },
+  async () => {
+    const { taskStore, configManager } = freshStore();
+    const viewModel = buildBoardViewModel(taskStore, configManager, {});
+    const totals = viewModel.states
+      .map((s) => `${s.name}: ${s.totalCount}`)
+      .join(' | ');
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Opening TaskPlanner board (${totals}).`,
         },
       ],
     };

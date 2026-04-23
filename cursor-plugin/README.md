@@ -6,7 +6,7 @@ Markdown-based task management for AI agents. This plugin gives Cursor agents th
 
 | Component | Description |
 |-----------|-------------|
-| **MCP Server** | 6 tools for full task CRUD: board overview, list, get, create, move, update |
+| **MCP Server** | 8 tools: board overview, list, get, create, move, update, board-data (JSON), board-visual (inline UI) |
 | **Commands** | `/list-tasks`, `/next-task`, `/continue-task` slash commands |
 | **Skill** | Full TaskPlanner workflow knowledge for agent auto-discovery |
 | **Rule** | Task markdown format conventions (fires when editing `.tasks/` files) |
@@ -19,6 +19,7 @@ Once installed, the agent can:
 - **Pick next task** — type `/next-task` to start the highest-priority item
 - **Continue current work** — type `/continue-task` to resume an in-progress task
 - **Use MCP tools directly** — e.g. "create a P1 task for fixing the login bug"
+- **Show the visual board** — ask "open the visual task board" (or invoke `taskplanner_board_visual`) to render an inline interactive kanban with drag-to-move and click-for-details (requires an [MCP Apps](https://modelcontextprotocol.io/extensions/apps) host, such as Cursor 2.6+)
 
 ## Requirements
 

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Interactive task board inside Cursor agent chats via MCP Apps — invoke `taskplanner_board_visual` (requires a host that supports the MCP Apps extension, e.g. Cursor 2.6+). Shows columns with drag-to-move and click-to-view-details (TASK-033).
+
 ### Changed
 
 - Internal refactor: removed duplicated BOM stripping, pagination slicing, and sync/async reload scaffolding in core; centralized VS Code extension settings access behind typed getters/setters. No user-visible behavior change (TASK-020).

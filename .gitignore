@@ -1,5 +1,7 @@
 node_modules/
 dist/
+!cursor-plugin/dist/
+!cursor-plugin/dist/**
 out/
 *.vsix
 .vscode-test/

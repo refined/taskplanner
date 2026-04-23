@@ -1,7 +1,7 @@
 {
   "name": "taskplanner",
   "description": "Markdown-based task management for AI agents. Read, create, move, and implement tasks stored in .tasks/ files.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": { "name": "refined" },
   "repository": "https://github.com/refined/taskplanner",
   "license": "GPL-3.0",

@@ -1,5 +1,82 @@
 # Done
 
+## TASK-035: Test Cursor Agents MCP board adapter and publish plugin to marketplace
+**Priority:** P2 | **Tags:** testing, docs, setup
+**Updated:** 2026-04-23 18:44
+
+End-to-end verify the `taskplanner_board_visual` MCP App shipped in TASK-033, then prepare the cursor-plugin for Cursor Marketplace submission.
+
+### Part A — Local test in Cursor 2.6+ (Windows)
+
+1. **Sideload the plugin** (symlink into Cursor's local plugin tree):
+
+   ```cmd
+   cmd /c mklink /D "%USERPROFILE%\.cursor\plugins\taskplanner" "C:\Development\taskplanner\cursor-plugin"
+   ```
+
+2. **Register it** in `%USERPROFILE%\.claude\plugins\installed_plugins.json`:
+
+   ```json
+   { "plugins": { "taskplanner@local": [ { "scope": "user", "installPath": "C:\\Users\\novik\\.cursor\\plugins\\taskplanner" } ] } }
+   ```
+
+3. **Enable** in `%USERPROFILE%\.claude\settings.json`:
+
+   ```json
+   { "enabledPlugins": { "taskplanner@local": true } }
+   ```
+
+4. In Cursor **Settings → Features**, enable **"Include third-party Plugins, Skills, and other configs"**, then restart Cursor.
+5. Open a workspace with a `.tasks/` folder (this repo works). Ask the agent "open the visual task board" or invoke `taskplanner_board_visual` directly.
+6. **Verify**:
+   - Iframe renders inline in the agent chat with columns + cards.
+   - Drag a card to another column → `taskplanner_move` fires → the `.md` file on disk updates → VS Code Kanban view reflects the change on next reload.
+   - Click a card → details drawer shows description and plan.
+   - Empty state (all columns empty) renders gracefully.
+7. **Fallback** if Cursor's iframe host misbehaves: smoke-test against `@modelcontextprotocol/ext-apps/examples/basic-host` to isolate whether the bug is in our tool or in Cursor.
+
+### Part B — Pre-submission gaps to close
+
+- Bump `cursor-plugin/.cursor-plugin/plugin.json` version `1.0.0` → `1.1.0` (new tools shipped).
+- Re-read the new `taskplanner_board_visual` bullet in `cursor-plugin/README.md` — tighten wording if needed.
+- Decide build-artifact policy: `mcp.json` runs `node ${CURSOR_PLUGIN_ROOT}/dist/mcp-server.js` and needs `cursor-plugin/ui/board/index.html`. Either commit `cursor-plugin/dist/` and `cursor-plugin/ui/board/` or add a prepublish build step. Check `.gitignore`.
+- Confirm `https://github.com/refined/taskplanner` is public and matches `cursor-plugin/.cursor-plugin/plugin.json`.
+
+### Part C — Marketplace submission
+
+- Submit at <https://cursor.com/marketplace/publish> with the GitHub repo URL.
+- Reviewer checklist to self-audit first: valid `.cursor-plugin/plugin.json` manifest, unique kebab-case name (`taskplanner` ✓), README present, logo (`assets/logo.svg` ✓), "tested locally" (Part A).
+- **Open question**: whether Cursor requires signed/notarized builds or publisher identity verification — public docs don't mention it; confirm in the reviewer queue if they flag it.
+
+### Plan
+
+- Wire local plugin loading on this machine (`mklink`, `installed_plugins.json`, `settings.json`) and capture what can be verified headlessly vs manually in Cursor UI.
+- Complete pre-submission edits: bump plugin version, tighten board-visual README wording, and align artifact policy with `mcp.json` runtime expectations.
+- Build MCP artifacts so `cursor-plugin/dist/mcp-server.js` and `cursor-plugin/ui/board/index.html` exist and are ready for packaging.
+- Run validation checks (build/lint/test scope as needed) and confirm repository URL consistency in plugin metadata.
+- Move TASK-035 to `DONE.md` with a condensed done-plan and add a `[Unreleased]` changelog entry.
+
+---
+
+## TASK-033: Visual views for Cursor Agents Window
+**Priority:** P3 | **Tags:** feature, ui
+**Updated:** 2026-04-22 21:20
+
+Shipped an interactive TaskPlanner board that renders inline in Cursor agent chats via the MCP Apps extension (`_meta.ui.resourceUri` + `ui://` resource). Cursor 3 plugins still cannot contribute to the real Agents Window sidebar; this is the closest surface the plugin API exposes today. Literal "alongside agent chats" placement remains blocked on Cursor to ship a panel contribution API.
+
+### Plan (done)
+
+- Confirmed MCP Apps spec: `_meta.ui.resourceUri` goes on the **tool description** (not response), URI scheme `ui://`, MIME `text/html;profile=mcp-app`, iframe uses `App.callServerTool` from `@modelcontextprotocol/ext-apps`.
+- Added pure `buildBoardViewModel()` in [src/core/view/boardViewModel.ts](../src/core/view/boardViewModel.ts); refactored [src/extension/views/webview/kanbanPanel.ts](../src/extension/views/webview/kanbanPanel.ts) to share it — no behavior change for the VS Code kanban.
+- [src/mcp/server.ts](../src/mcp/server.ts): new tools `taskplanner_board_data` (returns JSON view-model) and `taskplanner_board_visual` (carries `_meta.ui.resourceUri`, also sets legacy `ui/resourceUri` for older hosts); new resource `ui://taskplanner/board`. Chose plain `server.registerTool`/`registerResource` over `@modelcontextprotocol/ext-apps/server` helpers to avoid CJS/ESM import friction — the helpers just default the MIME and duplicate the legacy `_meta` key, both inlined.
+- Authored self-contained iframe UI in [src/mcp/ui/board/](../src/mcp/ui/board/) (TS + CSS + HTML template, ~500 lines). v1 behaviors: columns per state, priority/assignee/tags on cards, drag-to-move (calls `taskplanner_move`), click-to-open details drawer (calls `taskplanner_get`), Esc closes drawer, error banners. Dark/light theme via `prefers-color-scheme`.
+- Extended [esbuild.js](../esbuild.js) with a browser-platform IIFE build that inlines bundled JS + CSS into `board.html` → writes `cursor-plugin/ui/board/index.html` (single file, CSP-safe). MCP server reads it lazily with an in-process cache.
+- Excluded `src/mcp/ui/**/*.ts` from the main `tsconfig.json` (DOM lib not appropriate for server code); added `src/mcp/ui/tsconfig.json` for editor-time type checking of the browser UI.
+- Verified: `npm run lint` clean, `npm test` 100/100, `npm run build` produces the bundle, manual stdio JSON-RPC smoke test confirms tools/list, `_meta.ui.resourceUri`, `resources/list`, resource read (text/html;profile=mcp-app), and board-data JSON shape are all correct.
+- Deferred (follow-up tasks): inline edit via `taskplanner_update`, search/filter, drag-reorder within a column, real-time updates.
+
+---
+
 ## TASK-020: Technical debt cleanup and code simplification
 **Priority:** P2 | **Tags:** refactor
 **Updated:** 2026-04-20 18:00

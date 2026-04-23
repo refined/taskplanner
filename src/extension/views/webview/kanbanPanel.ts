@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { TaskStore } from '../../../core/store/taskStore.js';
 import { ConfigManager } from '../../../core/config/configManager.js';
-import { filterAndPaginate, TaskListSortBy } from '../../../core/filter/taskFilter.js';
+import { TaskListSortBy } from '../../../core/filter/taskFilter.js';
+import { buildBoardViewModel } from '../../../core/view/boardViewModel.js';
 import {
   TaskViewData,
   StateViewData,
   TaskViewItem,
-  TaskFilter,
 } from '../../../core/model/messages.js';
 import { getWebviewHtml } from './webviewHelper.js';
 import { getSortBy, setSortBy } from '../../config/extensionConfig.js';
@@ -146,35 +146,18 @@ export class KanbanPanel {
 
   private update(): void {
     this.syncParseWarningDismissState();
-    const config = this.configManager.get();
-    const states = config.states;
-    if (this.searchQuery.trim()) {
-      this.taskStore.ensureAllDeferredStatesLoaded();
-    }
-    const allTasks = this.taskStore.getAllTasks();
-    const filter: TaskFilter | undefined = this.searchQuery
-      ? { query: this.searchQuery }
-      : undefined;
-    const displayCounts = this.taskStore.getStateDisplayCounts();
-    const data = filterAndPaginate(
-      allTasks,
-      states,
-      filter,
-      undefined,
-      this.sortBy,
-      displayCounts,
-    );
+    const data = buildBoardViewModel(this.taskStore, this.configManager, {
+      searchQuery: this.searchQuery,
+      sortBy: this.sortBy,
+    });
 
-    // Apply per-state "show all"
+    // Apply per-state "show all" (VS Code panel only — MCP App view uses defaults)
     if (this.showAllForState.size > 0) {
-      const unlimitedData = filterAndPaginate(
-        allTasks,
-        states,
-        filter,
-        null,
-        this.sortBy,
-        displayCounts,
-      );
+      const unlimitedData = buildBoardViewModel(this.taskStore, this.configManager, {
+        searchQuery: this.searchQuery,
+        sortBy: this.sortBy,
+        limit: null,
+      });
       for (const state of data.states) {
         if (this.showAllForState.has(state.name)) {
           const full = unlimitedData.states.find((s) => s.name === state.name);
