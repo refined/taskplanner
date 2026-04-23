@@ -374,12 +374,30 @@ server.registerTool(
     description: 'Get board state as JSON (states + tasks). Used by the visual board iframe.',
     inputSchema: {
       query: z.string().optional().describe('Optional text query to filter tasks'),
+      include_completed: z
+        .boolean()
+        .optional()
+        .describe('If true, force-load Done/Rejected states before building board data'),
+      limit: z
+        .number()
+        .int()
+        .positive()
+        .nullable()
+        .optional()
+        .describe(
+          'Per-state task limit. Omit for default, set null to disable cap and return all tasks.',
+        ),
     },
   },
-  async ({ query }) => {
+  async ({ query, include_completed, limit }) => {
     const { taskStore, configManager } = freshStore();
+    if (include_completed) {
+      taskStore.ensureStateLoaded('Done');
+      taskStore.ensureStateLoaded('Rejected');
+    }
     const viewModel = buildBoardViewModel(taskStore, configManager, {
       searchQuery: query,
+      limit,
     });
     return { content: [{ type: 'text', text: JSON.stringify(viewModel) }] };
   },

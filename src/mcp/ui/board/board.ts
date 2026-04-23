@@ -26,6 +26,13 @@ interface ToolTextResult {
   isError?: boolean;
 }
 
+interface BoardDataArgs {
+  [key: string]: unknown;
+  query?: string;
+  include_completed?: boolean;
+  limit?: number | null;
+}
+
 const app = new App({ name: 'TaskPlanner Board', version: '1.0.0' });
 
 const root = document.getElementById('root')!;
@@ -33,6 +40,8 @@ const drawer = document.getElementById('drawer') as HTMLDivElement;
 
 let currentData: TaskViewData | null = null;
 let refreshInFlight = false;
+let expandedAllStates = false;
+let expandedCompleted = false;
 
 function escapeHtml(s: string): string {
   return s
@@ -86,8 +95,9 @@ function renderColumn(state: StateViewData): string {
     state.tasks.length === 0
       ? '<div class="empty">No tasks</div>'
       : state.tasks.map((t) => renderCard(t, state.name)).join('');
-  const more = state.hasMore
-    ? `<div class="more-pill">+${state.totalCount - state.tasks.length} more</div>`
+  const hiddenCount = Math.max(0, state.totalCount - state.tasks.length);
+  const more = hiddenCount > 0 && !expandedAllStates
+    ? `<button class="more-pill show-more-btn" type="button" data-state="${escapeHtml(state.name)}">Show ${hiddenCount} more</button>`
     : '';
   return `
     <div class="column" data-state="${escapeHtml(state.name)}">
@@ -107,6 +117,7 @@ function renderBoard(data: TaskViewData): void {
   root.innerHTML = `<div class="board">${columns}</div>`;
   wireDragAndDrop();
   wireCardClicks();
+  wireShowMore();
 }
 
 function wireDragAndDrop(): void {
@@ -183,9 +194,12 @@ async function refreshBoard(): Promise<void> {
   if (refreshInFlight) return;
   refreshInFlight = true;
   try {
+    const args: BoardDataArgs = {};
+    if (expandedAllStates) args.limit = null;
+    if (expandedCompleted) args.include_completed = true;
     const result = await app.callServerTool({
       name: 'taskplanner_board_data',
-      arguments: {},
+      arguments: args,
     });
     if (result.isError) {
       renderError(`Could not load board: ${extractText(result) || 'unknown error'}`);
@@ -203,6 +217,20 @@ async function refreshBoard(): Promise<void> {
   } finally {
     refreshInFlight = false;
   }
+}
+
+function wireShowMore(): void {
+  const buttons = root.querySelectorAll<HTMLButtonElement>('.show-more-btn');
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      expandedAllStates = true;
+      const stateName = button.dataset.state ?? '';
+      if (stateName === 'Done' || stateName === 'Rejected') {
+        expandedCompleted = true;
+      }
+      void refreshBoard();
+    });
+  });
 }
 
 async function openDrawer(taskId: string): Promise<void> {

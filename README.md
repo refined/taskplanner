@@ -21,6 +21,7 @@ AI-directed markdown task tracking built for AI-assisted development. Tasks live
 
 - **Filtered task list** — main view with grouping by status, assignee, date, or no grouping; search across all fields; Backlog/Done/Rejected hidden by default
 - **Kanban board** — drag-and-drop cards between columns, visual priority indicators
+- **Cursor MCP server with UI** **(Beta)** — bundled plugin exposes TaskPlanner MCP tools, including `taskplanner_board_visual` for an inline interactive board in agent chat and `taskplanner_board_data` as JSON fallback for non-MCP-Apps hosts
 - **Sidebar tree view** — tasks grouped by state (Backlog → Next → In Progress → Done)
 - **Drag-and-drop** — move tasks between states in tree view and Kanban board
 - **Assignee & timestamps** — track who owns each task and when it was last updated
@@ -162,6 +163,10 @@ The primary view opens automatically when you click the TaskPlanner sidebar icon
 ### Kanban Board
 
 Open via command palette → `TaskPlanner: Open Kanban Board`. Three columns: **Backlog**, **Active** (Next + In Progress), and **Completed** (Done + Rejected). Drag cards between columns or sub-zones to change state. Task cards show assignee and last update time.
+
+### Cursor Agent Chat Board (MCP UI)
+
+In Cursor, the bundled plugin can render a board inline in agent chat via `taskplanner_board_visual`. This MCP Apps view is separate from the extension Kanban panel above and uses the same task files. If the host does not support MCP Apps UI, use `taskplanner_board_data` plus the standard MCP task tools.
 
 ### Sidebar Tree
 
