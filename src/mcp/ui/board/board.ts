@@ -37,11 +37,16 @@ const app = new App({ name: 'TaskPlanner Board', version: '1.0.0' });
 
 const root = document.getElementById('root')!;
 const drawer = document.getElementById('drawer') as HTMLDivElement;
+const NARROW_LAYOUT_BREAKPOINT = 900;
+const DEFAULT_EXPANDED_NARROW_STATES = new Set(['Next', 'In Progress']);
 
 let currentData: TaskViewData | null = null;
 let refreshInFlight = false;
 let expandedAllStates = false;
 let expandedCompleted = false;
+let isNarrowLayout = false;
+let compactStateInitialized = false;
+let collapsedStates = new Set<string>();
 
 function escapeHtml(s: string): string {
   return s
@@ -91,6 +96,7 @@ function renderCard(task: TaskViewItem, stateName: string): string {
 }
 
 function renderColumn(state: StateViewData): string {
+  const isCollapsed = isNarrowLayout && collapsedStates.has(state.name);
   const cards =
     state.tasks.length === 0
       ? '<div class="empty">No tasks</div>'
@@ -99,25 +105,71 @@ function renderColumn(state: StateViewData): string {
   const more = hiddenCount > 0 && !expandedAllStates
     ? `<button class="more-pill show-more-btn" type="button" data-state="${escapeHtml(state.name)}">Show ${hiddenCount} more</button>`
     : '';
+  const body = isCollapsed ? '' : `${cards}${more}`;
+  const compactClass = isNarrowLayout ? ' compact' : '';
+  const collapsedClass = isCollapsed ? ' collapsed' : '';
+  const headerClass = isNarrowLayout ? 'column-header compact-toggle' : 'column-header';
+  const headerAttrs = isNarrowLayout
+    ? ` data-toggle-state="${escapeHtml(state.name)}" role="button" tabindex="0" aria-expanded="${String(!isCollapsed)}"`
+    : '';
+  const headerInner = isNarrowLayout
+    ? `<span class="column-toggle-chevron${isCollapsed ? ' collapsed' : ''}">▾</span><span class="column-toggle-label">${escapeHtml(state.name)} <span class="column-toggle-count">(${state.totalCount})</span></span>`
+    : `<span class="column-title">${escapeHtml(state.name)}</span>
+        <div class="column-header-right">
+          <span class="column-count">${state.totalCount}</span>
+        </div>`;
   return `
-    <div class="column" data-state="${escapeHtml(state.name)}">
-      <div class="column-header">
-        <span>${escapeHtml(state.name)}</span>
-        <span class="column-count">${state.totalCount}</span>
+    <div class="column${compactClass}${collapsedClass}" data-state="${escapeHtml(state.name)}">
+      <div class="${headerClass}"${headerAttrs}>
+        ${headerInner}
       </div>
-      ${cards}
-      ${more}
+      ${body}
     </div>`;
 }
 
 function renderBoard(data: TaskViewData): void {
+  ensureLayoutState(data);
   currentData = data;
   root.dataset.state = 'ready';
+  root.dataset.layout = isNarrowLayout ? 'compact' : 'wide';
   const columns = data.states.map(renderColumn).join('');
   root.innerHTML = `<div class="board">${columns}</div>`;
+  wireColumnToggles();
   wireDragAndDrop();
   wireCardClicks();
   wireShowMore();
+}
+
+function updateLayoutMode(): boolean {
+  const nextIsNarrow = window.innerWidth <= NARROW_LAYOUT_BREAKPOINT;
+  if (nextIsNarrow === isNarrowLayout) return false;
+  isNarrowLayout = nextIsNarrow;
+  if (!isNarrowLayout) {
+    collapsedStates.clear();
+    compactStateInitialized = false;
+  }
+  return true;
+}
+
+function ensureLayoutState(data: TaskViewData): void {
+  updateLayoutMode();
+  if (!isNarrowLayout) return;
+
+  if (!compactStateInitialized) {
+    const nextCollapsed = new Set<string>();
+    for (const state of data.states) {
+      if (!DEFAULT_EXPANDED_NARROW_STATES.has(state.name)) {
+        nextCollapsed.add(state.name);
+      }
+    }
+    collapsedStates = nextCollapsed;
+    compactStateInitialized = true;
+    return;
+  }
+
+  // Keep existing user toggles, but drop states no longer present.
+  const names = new Set(data.states.map((state) => state.name));
+  collapsedStates = new Set(Array.from(collapsedStates).filter((name) => names.has(name)));
 }
 
 function wireDragAndDrop(): void {
@@ -133,7 +185,7 @@ function wireDragAndDrop(): void {
     card.addEventListener('dragend', () => card.classList.remove('dragging'));
   });
 
-  const columns = root.querySelectorAll<HTMLElement>('.column');
+  const columns = root.querySelectorAll<HTMLElement>('.column:not(.collapsed)');
   columns.forEach((col) => {
     col.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -154,6 +206,27 @@ function wireDragAndDrop(): void {
       const targetState = col.dataset.state ?? '';
       if (!taskId || !targetState || targetState === fromState) return;
       await moveTask(taskId, targetState);
+    });
+  });
+}
+
+function wireColumnToggles(): void {
+  const toggles = root.querySelectorAll<HTMLElement>('.column-header[data-toggle-state]');
+  toggles.forEach((toggle) => {
+    toggle.addEventListener('click', () => {
+      const stateName = toggle.dataset.toggleState ?? '';
+      if (!stateName) return;
+      if (collapsedStates.has(stateName)) {
+        collapsedStates.delete(stateName);
+      } else {
+        collapsedStates.add(stateName);
+      }
+      if (currentData) renderBoard(currentData);
+    });
+    toggle.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      toggle.click();
     });
   });
 }
@@ -288,6 +361,13 @@ function findTaskInCurrent(taskId: string): TaskViewItem | undefined {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !drawer.hidden) closeDrawer();
+});
+
+window.addEventListener('resize', () => {
+  if (!currentData) return;
+  if (updateLayoutMode()) {
+    renderBoard(currentData);
+  }
 });
 
 app.ontoolresult = () => {

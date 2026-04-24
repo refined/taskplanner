@@ -45,7 +45,17 @@ Competitors often focus on UI and manual task editing. TaskPlanner is built for 
 
 - [**VS Code Marketplace**](https://marketplace.visualstudio.com/items?itemName=refined.taskplanner) — VS Code
 - [**Open VSX**](https://open-vsx.org/extension/refined/taskplanner) — Cursor IDE and other compatible editors
+- [**Cursor Marketplace (Plugin)**](https://cursor.com/marketplace) — search for `taskplanner`
 - **JetBrains IDEs** — planned
+
+## Distribution Model
+
+TaskPlanner ships as two artifacts:
+
+- **VS Code extension** (`refined.taskplanner`) for editor-native UI/runtime features (activity bar view, webviews, command contributions).
+- **Cursor plugin** (`cursor-plugin/`) for agent-native capabilities (MCP tools, skill, rule, slash commands).
+
+The extension can auto-register the bundled plugin when running inside Cursor, but the plugin is also publishable independently in the Cursor Marketplace.
 
 ## Quick Start
 
@@ -201,6 +211,14 @@ Project config is stored in `.tasks/config.json`. See [CONTRIBUTING.md](CONTRIBU
 ## Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, project structure, architecture decisions, and PR guidelines.
+
+Before creating a release, run:
+
+```bash
+npm run release:check
+```
+
+This builds extension + plugin artifacts and verifies Cursor plugin publish readiness (`plugin.json`, `mcp.json`, and required built files).
 
 ## License
 

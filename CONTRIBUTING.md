@@ -39,11 +39,22 @@ To run the extension in development mode:
 npm install          # Install dependencies
 npm run build        # Production build (esbuild)
 npm run watch        # Dev build with watch mode
+npm run validate:cursor-plugin  # Validate Cursor plugin manifest/artifacts
+npm run release:check # Build + plugin readiness checks
 npm test             # Run unit tests (Vitest)
 npm run lint         # Run ESLint
 npm run format       # Run Prettier
 npm run package      # Create .vsix package
 ```
+
+## Release Channels
+
+TaskPlanner is distributed through two channels:
+
+- **Extension channel**: VS Code Marketplace / Open VSX (`refined.taskplanner`) for editor UI/runtime features.
+- **Plugin channel**: Cursor Marketplace (`cursor-plugin/`) for agent-native MCP/skills/rules/commands.
+
+When preparing a plugin publish, run `npm run release:check` before submitting the repository at [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish).
 
 ## Project Structure
 

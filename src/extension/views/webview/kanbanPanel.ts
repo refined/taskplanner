@@ -221,13 +221,14 @@ export class KanbanPanel {
 
     let columns = '';
     if (backlogState) {
-      columns += this.buildStandardColumn(backlogState);
+      columns += this.buildStandardColumn(backlogState, 'backlog');
     }
     if (nextState || inProgressState) {
       columns += this.buildActiveColumn(nextState, inProgressState);
     }
     for (const cs of customStates) {
-      columns += this.buildStandardColumn(cs);
+      const key = `state-${cs.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+      columns += this.buildStandardColumn(cs, key);
     }
     if (doneState || rejectedState) {
       columns += this.buildCompletedColumn(doneState, rejectedState);
@@ -264,6 +265,72 @@ export class KanbanPanel {
     `;
 
     const script = `
+      const NARROW_BREAKPOINT = 900;
+      const COLLAPSE_STORAGE_KEY = 'taskplanner.kanban.collapsedColumns.v1';
+      const boardEl = document.querySelector('.kanban-board');
+
+      function loadCollapsedColumns() {
+        try {
+          const raw = sessionStorage.getItem(COLLAPSE_STORAGE_KEY);
+          if (!raw) return new Set();
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) return new Set();
+          return new Set(parsed.filter(v => typeof v === 'string'));
+        } catch {
+          return new Set();
+        }
+      }
+
+      function saveCollapsedColumns(set) {
+        try {
+          sessionStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(Array.from(set)));
+        } catch {
+          // ignore storage failures
+        }
+      }
+
+      let collapsedColumns = loadCollapsedColumns();
+
+      function applyColumnCollapseState() {
+        const columns = Array.from(document.querySelectorAll('.kanban-column[data-column-key]'));
+        columns.forEach((col) => {
+          const key = col.dataset.columnKey;
+          const isCollapsed = key ? collapsedColumns.has(key) : false;
+          col.classList.toggle('collapsed', isCollapsed);
+          const indicator = col.querySelector('.column-collapse-indicator');
+          if (indicator) {
+            const label = indicator.dataset.columnTitle || '';
+            const count = indicator.dataset.columnCount || '0';
+            indicator.innerHTML = '<span class="column-collapse-chevron' + (isCollapsed ? ' collapsed' : '') + '">▾</span><span class="column-collapse-label">' + label + ' <span class="column-collapse-count">(' + count + ')</span></span>';
+            indicator.setAttribute('aria-expanded', String(!isCollapsed));
+          }
+        });
+      }
+
+      function applyCompactLayout() {
+        if (!boardEl) return;
+        const isCompact = window.innerWidth <= NARROW_BREAKPOINT;
+        boardEl.classList.toggle('compact', isCompact);
+        if (!isCompact) {
+          document.querySelectorAll('.kanban-column').forEach((col) => col.classList.remove('collapsed'));
+          return;
+        }
+
+        if (collapsedColumns.size === 0) {
+          const columns = Array.from(document.querySelectorAll('.kanban-column[data-column-key]'));
+          columns.forEach((col) => {
+            const key = col.dataset.columnKey;
+            if (key && key !== 'active') {
+              collapsedColumns.add(key);
+            }
+          });
+          saveCollapsedColumns(collapsedColumns);
+        }
+        applyColumnCollapseState();
+      }
+
+      applyCompactLayout();
+
       // Search with debounce
       const queryEl = document.getElementById('queryFilter');
       let searchTimer;
@@ -344,6 +411,21 @@ export class KanbanPanel {
 
       // Button actions
       document.addEventListener('click', (e) => {
+        const compactHeader = e.target.closest('.kanban-board.compact .column-header[data-column-key]');
+        if (compactHeader && !e.target.closest('[data-action="addTask"]')) {
+          const key = compactHeader.dataset.columnKey;
+          if (key) {
+            if (collapsedColumns.has(key)) {
+              collapsedColumns.delete(key);
+            } else {
+              collapsedColumns.add(key);
+            }
+            saveCollapsedColumns(collapsedColumns);
+            applyColumnCollapseState();
+            return;
+          }
+        }
+
         const btn = e.target.closest('[data-action]');
         if (!btn) return;
         const action = btn.dataset.action;
@@ -372,6 +454,19 @@ export class KanbanPanel {
           e.preventDefault();
           vscode.postMessage({ type: 'dismissParseWarnings' });
         }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const active = document.activeElement;
+        if (!(active instanceof HTMLElement)) return;
+        if (!active.matches('.kanban-board.compact .column-header[data-column-key]')) return;
+        e.preventDefault();
+        active.click();
+      });
+
+      window.addEventListener('resize', () => {
+        applyCompactLayout();
       });
     `;
 
@@ -458,6 +553,9 @@ export class KanbanPanel {
           min-height: calc(100vh - 80px);
           align-items: flex-start;
         }
+        .kanban-board.compact {
+          gap: 8px;
+        }
         .kanban-column {
           flex: 0 0 260px;
           min-width: 220px;
@@ -466,6 +564,20 @@ export class KanbanPanel {
           border-radius: 6px;
           padding: 10px;
           transition: border-color 0.15s;
+        }
+        .kanban-board.compact .kanban-column {
+          flex-basis: 210px;
+          min-width: 180px;
+          padding: 7px;
+        }
+        .kanban-board.compact .kanban-column.collapsed {
+          flex-basis: 120px;
+          min-width: 120px;
+          max-width: 120px;
+          padding: 6px 5px;
+        }
+        .kanban-column.collapsed .kanban-column-body {
+          display: none;
         }
         [data-state-name].drag-over {
           border-color: var(--accent);
@@ -481,9 +593,86 @@ export class KanbanPanel {
           padding-bottom: 6px;
           border-bottom: 1px solid var(--card-border);
         }
+        .kanban-board.compact .column-header[data-column-key] {
+          cursor: pointer;
+          user-select: none;
+          border-radius: 6px;
+          padding-left: 8px;
+          padding-right: 8px;
+        }
+        .kanban-board.compact .column-header[data-column-key]:hover {
+          background: var(--card-hover);
+        }
+        .kanban-board.compact .column-header[data-column-key]:focus-visible {
+          outline: 1px solid var(--accent);
+          outline-offset: 1px;
+        }
+        .kanban-column.collapsed .column-header {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          justify-content: flex-start;
+          gap: 6px;
+          margin-bottom: 0;
+          padding: 2px 8px 2px;
+          border-bottom: none;
+        }
+        .column-header-right {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .kanban-column.collapsed .column-title {
+          font-size: 11px;
+          line-height: 1.2;
+          text-align: center;
+          word-break: break-word;
+        }
+        .kanban-column.collapsed .column-header-right {
+          display: inline-flex;
+          align-items: center;
+          gap: 0;
+        }
+        .kanban-column.collapsed .add-btn {
+          display: none;
+        }
         .column-title {
           font-weight: 600;
           font-size: 0.95em;
+        }
+        .column-collapse-indicator {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .column-collapse-chevron {
+          display: inline-block;
+          transition: transform 0.15s ease;
+          font-size: 18px;
+          line-height: 1;
+        }
+        .column-collapse-chevron.collapsed {
+          transform: rotate(-90deg);
+        }
+        .column-collapse-count {
+          color: var(--muted-fg);
+        }
+        .kanban-board:not(.compact) .column-collapse-indicator {
+          display: none;
+        }
+        .kanban-column.collapsed .column-collapse-indicator {
+          font-size: 11px;
+          padding: 0;
+          justify-content: flex-start;
+        }
+        .kanban-column.collapsed .column-collapse-label {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .kanban-board.compact > .kanban-column > .column-header .column-title,
+        .kanban-board.compact > .kanban-column > .column-header .count-badge {
+          display: none;
         }
         .kanban-card {
           position: relative;
@@ -494,6 +683,16 @@ export class KanbanPanel {
           border-radius: 4px;
           cursor: grab;
           transition: background 0.1s, opacity 0.15s;
+        }
+        .kanban-board.compact .kanban-card {
+          padding: 6px;
+        }
+        .kanban-board.compact .task-title {
+          font-size: 0.86em;
+          line-height: 1.2;
+        }
+        .kanban-board.compact .task-tags {
+          display: none;
         }
         .kanban-card:hover {
           background: var(--card-hover);
@@ -644,7 +843,11 @@ export class KanbanPanel {
   }
 
   /** Standard column (used for In Progress and custom states) */
-  private buildStandardColumn(state: StateViewData): string {
+  private buildStandardColumn(
+    state: StateViewData,
+    columnKey: string,
+    title = state.name,
+  ): string {
     const cards = state.tasks.map((t) => this.buildCard(t)).join('\n');
     const showMore = state.hasMore
       ? `<div class="show-more" data-action="showAll" data-state-name="${state.name}">Showing ${state.tasks.length} of ${state.totalCount} — Show all</div>`
@@ -652,17 +855,20 @@ export class KanbanPanel {
     const empty = state.tasks.length === 0 ? '<div class="empty-state">No tasks</div>' : '';
 
     return `
-      <div class="kanban-column" data-state-name="${state.name}">
-        <div class="column-header">
-          <span class="column-title">${state.name}</span>
-          <div style="display:flex; align-items:center; gap:6px;">
+      <div class="kanban-column" data-state-name="${state.name}" data-column-key="${columnKey}">
+        <div class="column-header" data-column-key="${columnKey}" role="button" tabindex="0">
+          <span class="column-title">${title}</span>
+          <div class="column-header-right">
             <span class="count-badge">${state.totalCount}</span>
             <button class="add-btn" data-action="addTask" data-state-name="${state.name}" title="Add task to ${state.name}">+</button>
+            <span class="column-collapse-indicator" data-column-title="${this.escapeAttr(title)}" data-column-count="${state.totalCount}" aria-expanded="true"><span class="column-collapse-chevron">▾</span><span class="column-collapse-label">${this.escapeHtml(title)} <span class="column-collapse-count">(${state.totalCount})</span></span></span>
           </div>
         </div>
-        ${cards}
-        ${empty}
-        ${showMore}
+        <div class="kanban-column-body">
+          ${cards}
+          ${empty}
+          ${showMore}
+        </div>
       </div>
     `;
   }
@@ -714,13 +920,18 @@ export class KanbanPanel {
     }
 
     return `
-      <div class="kanban-column">
-        <div class="column-header">
+      <div class="kanban-column" data-column-key="active">
+        <div class="column-header" data-column-key="active" role="button" tabindex="0">
           <span class="column-title">Active</span>
-          <span class="count-badge">${totalActive}</span>
+          <div class="column-header-right">
+            <span class="count-badge">${totalActive}</span>
+            <span class="column-collapse-indicator" data-column-title="Active" data-column-count="${totalActive}" aria-expanded="true"><span class="column-collapse-chevron">▾</span><span class="column-collapse-label">Active <span class="column-collapse-count">(${totalActive})</span></span></span>
+          </div>
         </div>
-        ${inProgressHtml}
-        ${nextHtml}
+        <div class="kanban-column-body">
+          ${inProgressHtml}
+          ${nextHtml}
+        </div>
       </div>
     `;
   }
@@ -790,12 +1001,17 @@ export class KanbanPanel {
     }
 
     return `
-      <div class="kanban-column">
-        <div class="column-header">
+      <div class="kanban-column" data-column-key="completed">
+        <div class="column-header" data-column-key="completed" role="button" tabindex="0">
           <span class="column-title">Completed</span>
-          <span class="count-badge">${totalCompleted}</span>
+          <div class="column-header-right">
+            <span class="count-badge">${totalCompleted}</span>
+            <span class="column-collapse-indicator" data-column-title="Completed" data-column-count="${totalCompleted}" aria-expanded="true"><span class="column-collapse-chevron">▾</span><span class="column-collapse-label">Completed <span class="column-collapse-count">(${totalCompleted})</span></span></span>
+          </div>
         </div>
-        ${innerContent}
+        <div class="kanban-column-body">
+          ${innerContent}
+        </div>
       </div>
     `;
   }

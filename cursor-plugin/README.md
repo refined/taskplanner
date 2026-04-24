@@ -2,6 +2,8 @@
 
 Markdown-based task management for AI agents. This plugin gives Cursor agents the ability to read, create, move, and implement tasks stored in `.tasks/` files.
 
+This package is the Cursor Marketplace companion to the TaskPlanner VS Code extension. Use this plugin for agent workflows; use the extension for editor-side UI panels.
+
 ## What's included
 
 | Component | Description |
@@ -65,3 +67,14 @@ Description in markdown.
 ## License
 
 GPL-3.0
+
+## Marketplace submission checklist
+
+For maintainers preparing a publish/update:
+
+1. Build the repo root artifacts:
+   - `npm run build`
+2. Validate plugin packaging from repo root:
+   - `npm run validate:cursor-plugin`
+3. Confirm public source repo + open-source license metadata in `.cursor-plugin/plugin.json`.
+4. Submit/update at [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish).
